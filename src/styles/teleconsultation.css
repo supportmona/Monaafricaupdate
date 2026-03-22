@@ -1,0 +1,4 @@
+/* Add mirror effect for local video */
+.mirror {
+  transform: scaleX(-1);
+}

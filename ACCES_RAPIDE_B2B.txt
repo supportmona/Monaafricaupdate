@@ -1,0 +1,60 @@
+═══════════════════════════════════════════════════════════
+  🏢 ACCÈS RAPIDE PORTAIL ENTREPRISE M.O.N.A
+═══════════════════════════════════════════════════════════
+
+📍 URL DE CONNEXION
+──────────────────
+http://localhost:3000/entreprise/login
+
+
+🔐 COMPTES DE TEST
+──────────────────
+
+1. ENTREPRISE DÉMO (Recommandé)
+   Email     : demo.rh@monafrica.net
+   Password  : RH2025!
+   Employés  : 50
+
+2. EKOLO TECH
+   Email     : rh@ekolo-tech.com
+   Password  : MonaB2B2024!
+   Employés  : 113
+
+3. BANTU FINANCE
+   Email     : hr@bantu-finance.com
+   Password  : MonaB2B2024!
+   Employés  : 87
+
+
+🚀 ACCÈS EN 3 CLICS
+────────────────────
+1. Allez sur /entreprise/login
+2. Copiez un compte ci-dessus
+3. Cliquez "Se connecter"
+
+
+📊 FONCTIONNALITÉS DISPONIBLES
+────────────────────────────────
+✓ Dashboard RH avec analytics
+✓ Gestion des employés
+✓ Suivi des consultations
+✓ Graphiques Recharts
+✓ Paramètres entreprise
+✓ Gestion abonnement
+
+
+🆘 PROBLÈME ?
+──────────────
+Videz le cache : Ctrl+Shift+R
+Documentation : QUICKSTART_ENTREPRISE.md
+
+
+✅ VÉRIFICATION
+────────────────
+Badge vert en bas à droite = Code OK
+Version : v2.0-entreprise-login-ready
+
+
+═══════════════════════════════════════════════════════════
+  Dernière MAJ : 16 Mars 2026, 14:45
+═══════════════════════════════════════════════════════════

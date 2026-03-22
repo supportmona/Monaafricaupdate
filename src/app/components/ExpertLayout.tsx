@@ -1,0 +1,183 @@
+import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router";
+import { Menu, User, Settings, LogOut, ChevronDown, Bell } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import ExpertSidebar from "./ExpertSidebar";
+import { useExpertAuth } from "@/app/contexts/ExpertAuthContext";
+
+// Layout principal pour l'interface expert
+interface ExpertLayoutProps {
+  children: React.ReactNode;
+  title: string;
+}
+
+export default function ExpertLayout({ children, title }: ExpertLayoutProps) {
+  const navigate = useNavigate();
+  const { user, profile } = useExpertAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const getInitials = () => {
+    if (profile?.firstName && profile?.lastName) {
+      return `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase();
+    }
+    if (user?.user_metadata?.firstName && user?.user_metadata?.lastName) {
+      return `${user.user_metadata.firstName[0]}${user.user_metadata.lastName[0]}`.toUpperCase();
+    }
+    return "EX";
+  };
+
+  const expertData = {
+    name: profile 
+      ? `${profile.firstName} ${profile.lastName}` 
+      : user?.user_metadata 
+        ? `${user.user_metadata.firstName} ${user.user_metadata.lastName}`
+        : "Expert",
+    specialty: profile?.specialty || user?.user_metadata?.specialty || "Spécialité",
+    avatar: getInitials(),
+    email: user?.email || profile?.email || "expert@monafrica.net"
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("mona_expert_token");
+    navigate('/expert/login');
+  };
+
+  return (
+    <div className="min-h-screen bg-[#F5F1ED] flex">
+      {/* Sidebar */}
+      <ExpertSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      {/* Main content area */}
+      <div className="flex-1 lg:ml-80 flex flex-col min-h-screen">
+        {/* Header */}
+        <header className="bg-white border-b border-[#D4C5B9] sticky top-0 z-30">
+          <div className="h-16 px-6 flex items-center justify-between">
+            {/* Left */}
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 hover:bg-[#F5F1ED] rounded-lg transition-colors"
+              >
+                <Menu className="w-5 h-5 text-[#1A1A1A]" />
+              </button>
+              <h1 className="text-lg font-serif text-[#1A1A1A]">{title}</h1>
+            </div>
+
+            {/* Right */}
+            <div className="flex items-center gap-3">
+              {/* Notifications */}
+              <button className="relative p-2 hover:bg-[#F5F1ED] rounded-lg transition-colors">
+                <Bell className="w-5 h-5 text-[#1A1A1A]" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+              </button>
+
+              {/* Profile menu */}
+              <div className="relative" ref={menuRef}>
+                <button
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  className="flex items-center gap-2 hover:bg-[#F5F1ED] rounded-full pr-3 pl-1 py-1 transition-colors"
+                >
+                  <div className="w-9 h-9 bg-gradient-to-br from-[#A68B6F] to-[#D4C5B9] rounded-full flex items-center justify-center text-white font-medium text-sm">
+                    {expertData.avatar}
+                  </div>
+                  <span className="text-sm text-[#1A1A1A] hidden sm:inline">
+                    {expertData.name}
+                  </span>
+                  <ChevronDown
+                    className={`w-4 h-4 text-[#1A1A1A]/60 transition-transform ${
+                      showProfileMenu ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                <AnimatePresence>
+                  {showProfileMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-[#D4C5B9] overflow-hidden"
+                    >
+                      {/* Profile info */}
+                      <div className="p-4 border-b border-[#D4C5B9]">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="w-12 h-12 bg-gradient-to-br from-[#A68B6F] to-[#D4C5B9] rounded-full flex items-center justify-center text-white font-medium">
+                            {expertData.avatar}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-[#1A1A1A] truncate">
+                              {expertData.name}
+                            </p>
+                            <p className="text-xs text-[#1A1A1A]/60 truncate">
+                              {expertData.specialty}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-[#1A1A1A]/60 truncate">
+                          {expertData.email}
+                        </p>
+                      </div>
+
+                      {/* Menu items */}
+                      <div className="py-2">
+                        <button
+                          onClick={() => {
+                            setShowProfileMenu(false);
+                            navigate("/expert/settings");
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[#1A1A1A] hover:bg-[#F5F1ED] transition-colors"
+                        >
+                          <User className="w-4 h-4" />
+                          <span>Mon profil</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowProfileMenu(false);
+                            navigate("/expert/settings");
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[#1A1A1A] hover:bg-[#F5F1ED] transition-colors"
+                        >
+                          <Settings className="w-4 h-4" />
+                          <span>Paramètres</span>
+                        </button>
+                      </div>
+
+                      {/* Logout */}
+                      <div className="border-t border-[#D4C5B9] py-2">
+                        <button
+                          onClick={handleLogout}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span>Se déconnecter</span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Page content - FULL WIDTH */}
+        <main className="flex-1">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}

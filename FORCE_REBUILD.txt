@@ -1,0 +1,4 @@
+FORCE REBUILD - Mars 16, 2026 14:30
+Navigation links updated: /b2b-login → /entreprise/login
+All enterprise login routes now point to /entreprise/login
+Cache: Please clear your browser cache and hard reload (Ctrl+Shift+R or Cmd+Shift+R)
