@@ -75,29 +75,38 @@ export default function ExpertDashboardPage() {
         }));
       }
 
-      // Mock upcoming consultations (à remplacer par vraie API)
-      setUpcomingConsultations([
+      // Fetch real upcoming consultations for this expert
+      const consultationsRes = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-6378cc81/expert/consultations`,
         {
-          id: "1",
-          patientName: "Marie Kouassi",
-          time: "14:00",
-          type: "Suivi régulier",
-          status: "confirmed",
-        },
-        {
-          id: "2",
-          patientName: "Jean Nkomo",
-          time: "15:30",
-          type: "Première consultation",
-          status: "confirmed",
-        },
-      ]);
+          headers: {
+            Authorization: `Bearer ${publicAnonKey}`,
+            "X-Expert-Token": token,
+          },
+        }
+      );
 
-      setStats(prev => ({
-        ...prev,
-        todayConsultations: 2,
-        weekConsultations: 8,
-      }));
+      if (consultationsRes.ok) {
+        const consultationsData = await consultationsRes.json();
+        const consultations = consultationsData.data || [];
+        setUpcomingConsultations(
+          consultations.filter((c: any) => c.status === "scheduled")
+        );
+        // Calculate stats
+        const today = new Date().toISOString().split("T")[0];
+        const todayConsults = consultations.filter((c: any) => c.date === today).length;
+        const weekStart = new Date();
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        const weekConsults = consultations.filter((c: any) => {
+          const cDate = new Date(c.date);
+          return cDate >= weekStart;
+        }).length;
+        setStats(prev => ({
+          ...prev,
+          todayConsultations: todayConsults,
+          weekConsultations: weekConsults,
+        }));
+      }
 
     } catch (error) {
       console.error("Erreur chargement dashboard expert:", error);

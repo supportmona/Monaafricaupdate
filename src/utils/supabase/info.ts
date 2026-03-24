@@ -1,0 +1,3 @@
+// Fichier utilitaire pour les infos Supabase
+export const projectId = "krzmvwbusoglpazlsylm";
+export const publicAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtyem12d2J1c29nbHBhemxzeWxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1Nzg2MDIsImV4cCI6MjA4NTE1NDYwMn0.coo3gnqB9O2-FZcXkHdnCY2bsUUR0R0aNNZouSvmk4M";

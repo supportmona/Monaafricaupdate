@@ -22,8 +22,7 @@ const menuItems = [
   { name: "Agenda", path: "/expert/agenda", icon: Calendar },
   { name: "Patients", path: "/expert/patients", icon: Users },
   { name: "Dossiers médicaux", path: "/expert/medical-records", icon: FileText },
-  { name: "Documents", path: "/expert/documents", icon: ClipboardList },
-  { name: "Messages", path: "/expert/messages", icon: MessageSquare },
+  { name: "Messagerie", path: "/expert/messages", icon: MessageSquare },
   { name: "Paramètres", path: "/expert/settings", icon: Settings },
 ];
 
@@ -61,7 +60,8 @@ export default function ExpertSidebar({ isOpen, onClose }: ExpertSidebarProps) {
               </div>
               <button
                 onClick={onClose}
-                className="lg:hidden p-2 hover:bg-[#F5F1ED] rounded-lg transition-colors"
+                className="p-2 hover:bg-[#F5F1ED] rounded-lg transition-colors"
+                aria-label="Fermer le menu"
               >
                 <X className="w-5 h-5" />
               </button>

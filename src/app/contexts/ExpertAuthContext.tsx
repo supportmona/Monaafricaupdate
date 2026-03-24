@@ -37,6 +37,7 @@ interface ExpertAuthContextType {
   accessToken: string | null;
   loading: boolean;
   error: string | null;
+  isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
@@ -57,16 +58,17 @@ export function ExpertAuthProvider({ children }: { children: React.ReactNode }) 
 
   // Nettoyer l'ancien système d'authentification au chargement
   useEffect(() => {
-    const cleanupOldAuth = () => {
-      // Supprimer les anciennes clés obsolètes et tous les tokens
-      const oldKeys = ["mona_expert_user", "expert_token", "expert_access_token", "expert_user", "expert_profile"];
-      oldKeys.forEach(key => {
+    // Ne supprimer que les anciennes clés obsolètes, PAS les nouvelles clés d'authentification expert
+    const oldKeys = ["mona_expert_user", "expert_token"];
+    let cleaned = false;
+    oldKeys.forEach(key => {
+      if (localStorage.getItem(key)) {
         localStorage.removeItem(key);
-      });
-    };
-
-    cleanupOldAuth();
-    setLoading(false); // Juste marquer comme chargé, pas de vérification auto
+        cleaned = true;
+      }
+    });
+    // Si rien à nettoyer, ne touche pas aux clés d'authentification actuelles
+    setLoading(false);
   }, []);
 
   // Fonction pour vérifier la session (utilisée uniquement par refreshSession)
@@ -219,6 +221,7 @@ export function ExpertAuthProvider({ children }: { children: React.ReactNode }) 
     await checkSession();
   };
 
+  const isAuthenticated = !!accessToken && !!user;
   return (
     <ExpertAuthContext.Provider
       value={{
@@ -227,6 +230,7 @@ export function ExpertAuthProvider({ children }: { children: React.ReactNode }) 
         accessToken,
         loading,
         error,
+        isAuthenticated,
         login,
         logout,
         refreshSession,

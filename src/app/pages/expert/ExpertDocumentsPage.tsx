@@ -1,103 +1,107 @@
+// Cette page est désormais fusionnée dans ExpertMedicalRecordsPage.tsx
+// Voir /expert/medical-records pour la vue complète (templates Mona + documents)
+export default function ExpertDocumentsPage() {
+  return null;
+}
 import { useState } from "react";
 import ExpertLayout from "@/app/components/ExpertLayout";
 import { FileText, Stethoscope, Brain, ChevronRight, Heart } from "lucide-react";
 import { useNavigate } from "react-router";
 
-type TemplateCategory = "prescription" | "careplan" | "certificate" | "report" | "referral";
-type SpecialtyType = "mental_health" | "primary_care";
+// Nouvelle version moderne, claire, ergonomique
+import { useNavigate } from "react-router";
+import ExpertLayout from "@/app/components/ExpertLayout";
+import { Brain, Stethoscope, FileText } from "lucide-react";
 
-interface Template {
-  id: string;
-  type: TemplateCategory;
-  category: SpecialtyType;
-  name: string;
-  description: string;
-}
-
-const TEMPLATES: Template[] = [
-  // Ordonnances
+const MONA_TEMPLATES = [
   {
-    id: "prescription_mental_health",
-    type: "prescription",
-    category: "mental_health",
-    name: "Ordonnance - Santé mentale",
-    description: "Template d'ordonnance pour traitements psychiatriques"
+    category: "Santé mentale",
+    color: "bg-blue-50 border-blue-200",
+    icon: <Brain className="w-6 h-6 text-blue-600" />,
+    templates: [
+      { id: "prescription_mental_health", name: "Ordonnance Mona", desc: "Traitements psychiatriques" },
+      { id: "careplan_mental_health", name: "Plan de soins Mona", desc: "Suivi psychiatrique/psychologique" },
+      { id: "certificate_mental_health", name: "Certificat médical Mona", desc: "Arrêt de travail ou aptitude psychologique" },
+      { id: "report_mental_health", name: "Compte-rendu Mona", desc: "Consultation psychiatrique/psychologique" },
+      { id: "referral_mental_health", name: "Lettre de liaison Mona", desc: "Vers structure spécialisée" },
+    ]
   },
   {
-    id: "prescription_primary_care",
-    type: "prescription",
-    category: "primary_care",
-    name: "Ordonnance - Soins primaires",
-    description: "Template d'ordonnance pour soins médicaux généraux"
-  },
-  // Plans de soins
-  {
-    id: "careplan_mental_health",
-    type: "careplan",
-    category: "mental_health",
-    name: "Plan de soins - Santé mentale",
-    description: "Plan de soins structuré pour suivi psychiatrique/psychologique"
-  },
-  {
-    id: "careplan_primary_care",
-    type: "careplan",
-    category: "primary_care",
-    name: "Plan de soins - Soins primaires",
-    description: "Plan de soins pour pathologie médicale générale"
-  },
-  // Certificats médicaux
-  {
-    id: "certificate_mental_health",
-    type: "certificate",
-    category: "mental_health",
-    name: "Certificat médical - Santé mentale",
-    description: "Certificat pour arrêt de travail ou aptitude psychologique"
-  },
-  {
-    id: "certificate_primary_care",
-    type: "certificate",
-    category: "primary_care",
-    name: "Certificat médical - Soins primaires",
-    description: "Certificat médical standard pour justificatif ou arrêt de travail"
-  },
-  // Comptes-rendus
-  {
-    id: "report_mental_health",
-    type: "report",
-    category: "mental_health",
-    name: "Compte-rendu - Santé mentale",
-    description: "Compte-rendu détaillé de consultation psychiatrique/psychologique"
-  },
-  {
-    id: "report_primary_care",
-    type: "report",
-    category: "primary_care",
-    name: "Compte-rendu - Soins primaires",
-    description: "Compte-rendu de consultation médicale générale"
-  },
-  // Lettres de liaison
-  {
-    id: "referral_mental_health",
-    type: "referral",
-    category: "mental_health",
-    name: "Lettre de liaison - Santé mentale",
-    description: "Lettre de liaison vers confrère ou structure spécialisée"
-  },
-  {
-    id: "referral_primary_care",
-    type: "referral",
-    category: "primary_care",
-    name: "Lettre de liaison - Soins primaires",
-    description: "Lettre de liaison médicale vers spécialiste"
+    category: "Soins primaires",
+    color: "bg-green-50 border-green-200",
+    icon: <Stethoscope className="w-6 h-6 text-green-600" />,
+    templates: [
+      { id: "prescription_primary_care", name: "Ordonnance Mona", desc: "Soins médicaux généraux" },
+      { id: "careplan_primary_care", name: "Plan de soins Mona", desc: "Pathologie médicale générale" },
+      { id: "certificate_primary_care", name: "Certificat médical Mona", desc: "Justificatif ou arrêt de travail" },
+      { id: "report_primary_care", name: "Compte-rendu Mona", desc: "Consultation médicale générale" },
+      { id: "referral_primary_care", name: "Lettre de liaison Mona", desc: "Vers spécialiste" },
+    ]
   }
 ];
 
-const TEMPLATE_TYPES = [
-  { id: "prescription" as TemplateCategory, name: "Ordonnances", icon: FileText },
-  { id: "careplan" as TemplateCategory, name: "Plans de soins", icon: Heart },
-  { id: "certificate" as TemplateCategory, name: "Certificats", icon: FileText },
-  { id: "report" as TemplateCategory, name: "Comptes-rendus", icon: FileText },
-  { id: "referral" as TemplateCategory, name: "Lettres de liaison", icon: FileText }
+export default function ExpertDocumentsPage() {
+  const navigate = useNavigate();
+  return (
+    <ExpertLayout title="Documents & Templates Mona">
+      <div className="max-w-3xl mx-auto py-8">
+        <h1 className="text-3xl font-serif mb-6 text-[#1A1A1A]">Templates Mona</h1>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {MONA_TEMPLATES.map((cat) => (
+            <div key={cat.category} className={`rounded-2xl border ${cat.color} p-6 shadow-sm`}>
+              <div className="flex items-center gap-3 mb-4">
+                {cat.icon}
+                <h2 className="text-xl font-semibold text-[#1A1A1A]">{cat.category}</h2>
+              </div>
+              <ul className="space-y-3">
+                {cat.templates.map((tpl) => (
+                  <li key={tpl.id} className="flex items-center justify-between group">
+                    <div>
+                      <span className="font-medium text-[#1A1A1A]">{tpl.name}</span>
+                      <span className="ml-2 text-xs text-[#1A1A1A]/60">{tpl.desc}</span>
+                    </div>
+                    <button
+                      className="px-4 py-2 rounded-full bg-[#A68B6F] text-white text-xs font-semibold shadow hover:bg-[#8A7159] transition-colors"
+                      onClick={() => navigate(`/expert/documents/${tpl.id}`)}
+                    >
+                      Ouvrir
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        {/* Info card */}
+        <div className="bg-[#F5F1ED] rounded-2xl p-6 border border-[#D4C5B9] mt-10">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-[#A68B6F] rounded-xl flex items-center justify-center flex-shrink-0">
+              <FileText className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-medium text-[#1A1A1A] mb-2">
+                À propos des documents
+              </h3>
+              <p className="text-sm text-[#1A1A1A]/70 leading-relaxed mb-4">
+                Ces 10 documents essentiels couvrent les besoins cliniques fondamentaux en santé mentale et soins primaires. Chaque document est conçu selon les standards médicaux africains et internationaux.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div className="flex items-center gap-2 text-[#1A1A1A]/60">
+                  <Brain className="w-4 h-4 text-[#A68B6F]" />
+                  <span>5 documents santé mentale</span>
+                </div>
+                <div className="flex items-center gap-2 text-[#1A1A1A]/60">
+                  <Stethoscope className="w-4 h-4 text-[#B85C50]" />
+                  <span>5 documents soins primaires</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ExpertLayout>
+  );
+}
 ];
 
 export default function ExpertDocumentsPage() {

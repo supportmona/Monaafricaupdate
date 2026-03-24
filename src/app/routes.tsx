@@ -126,6 +126,7 @@ const ChatPage = lazy(() => import("@/app/pages/portal/ChatPage"));
 const MedicalCertificatePage = lazy(() => import("@/app/pages/expert/MedicalCertificatePage"));
 const MedicalReportPage = lazy(() => import("@/app/pages/expert/MedicalReportPage"));
 const ReferralLetterPage = lazy(() => import("@/app/pages/expert/ReferralLetterPage"));
+const ExpertConsultationsPage = lazy(() => import("@/app/pages/expert/ExpertConsultationsPage"));
 
 // Company Portal Pages
 const CompanyDashboardPage = lazy(() => import("@/app/pages/portal/CompanyDashboardPage"));
@@ -309,6 +310,7 @@ export const router = createBrowserRouter([
   { path: "/expert/medical-certificate", element: <SuspenseWrapper><ExpertProtectedRoute><MedicalCertificatePage /></ExpertProtectedRoute></SuspenseWrapper> },
   { path: "/expert/medical-report", element: <SuspenseWrapper><ExpertProtectedRoute><MedicalReportPage /></ExpertProtectedRoute></SuspenseWrapper> },
   { path: "/expert/referral-letter", element: <SuspenseWrapper><ExpertProtectedRoute><ReferralLetterPage /></ExpertProtectedRoute></SuspenseWrapper> },
+  { path: "/expert/consultations", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertConsultationsPage /></ExpertProtectedRoute></SuspenseWrapper> },
 
   // Company Portal
   { path: "/company/dashboard", element: <SuspenseWrapper><CompanyProtectedRoute><CompanyDashboardPage /></CompanyProtectedRoute></SuspenseWrapper> },
