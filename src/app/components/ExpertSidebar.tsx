@@ -18,7 +18,6 @@ interface ExpertSidebarProps {
 }
 
 const menuItems = [
-  { name: "Tableau de bord", path: "/expert/dashboard", icon: LayoutDashboard },
   { name: "Agenda", path: "/expert/agenda", icon: Calendar },
   { name: "Patients", path: "/expert/patients", icon: Users },
   { name: "Dossiers médicaux", path: "/expert/medical-records", icon: FileText },
