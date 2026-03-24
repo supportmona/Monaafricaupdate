@@ -1,39 +1,3 @@
-      {/* Modal - Aperçu Template Mona */}
-      <AnimatePresence>
-        {selectedTemplate && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl max-w-lg w-full"
-            >
-              <div className="p-6 border-b border-[#D4C5B9] flex items-center justify-between">
-                <h2 className="text-2xl font-serif text-[#1A1A1A]">{selectedTemplate.name}</h2>
-                <button
-                  onClick={() => setSelectedTemplate(null)}
-                  className="p-2 hover:bg-[#F5F1ED] rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-[#1A1A1A]" />
-                </button>
-              </div>
-              <div className="p-6">
-                <p className="text-[#1A1A1A]/80 mb-4">{selectedTemplate.desc}</p>
-                <div className="bg-[#F5F1ED] rounded-xl p-6 text-center">
-                  <span className="text-[#A68B6F] font-semibold">Aperçu du template Mona</span>
-                  <div className="mt-4 text-xs text-[#1A1A1A]/60">(Le contenu détaillé sera bientôt disponible)</div>
-                </div>
-                <button
-                  onClick={() => setSelectedTemplate(null)}
-                  className="mt-8 px-6 py-3 bg-[#A68B6F] text-white rounded-full hover:bg-[#8A7159] transition-colors w-full"
-                >
-                  Fermer
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Link } from "react-router";
@@ -378,9 +342,6 @@ export default function ExpertMedicalRecordsPage() {
         {/* Section Documents uploadés (MedicalRecords) */}
         {tab === 'documents' && (
           <div className="space-y-6">
-            {/* ...existing code... */}
-        <div className="space-y-6">
-          {/* ...existing code... */}
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <motion.div
@@ -636,6 +597,8 @@ export default function ExpertMedicalRecordsPage() {
             </div>
           )}
         </motion.div>
+          </div>
+        )}
       </div>
 
       {/* Modal - Détails dossier */}
@@ -824,6 +787,43 @@ export default function ExpertMedicalRecordsPage() {
                     Fermer
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal - Aperçu Template Mona */}
+      <AnimatePresence>
+        {selectedTemplate && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl max-w-lg w-full"
+            >
+              <div className="p-6 border-b border-[#D4C5B9] flex items-center justify-between">
+                <h2 className="text-2xl font-serif text-[#1A1A1A]">{selectedTemplate.name}</h2>
+                <button
+                  onClick={() => setSelectedTemplate(null)}
+                  className="p-2 hover:bg-[#F5F1ED] rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-[#1A1A1A]" />
+                </button>
+              </div>
+              <div className="p-6">
+                <p className="text-[#1A1A1A]/80 mb-4">{selectedTemplate.desc}</p>
+                <div className="bg-[#F5F1ED] rounded-xl p-6 text-center">
+                  <span className="text-[#A68B6F] font-semibold">Aperçu du template Mona</span>
+                  <div className="mt-4 text-xs text-[#1A1A1A]/60">(Le contenu détaillé sera bientôt disponible)</div>
+                </div>
+                <button
+                  onClick={() => setSelectedTemplate(null)}
+                  className="mt-8 px-6 py-3 bg-[#A68B6F] text-white rounded-full hover:bg-[#8A7159] transition-colors w-full"
+                >
+                  Fermer
+                </button>
               </div>
             </motion.div>
           </div>
