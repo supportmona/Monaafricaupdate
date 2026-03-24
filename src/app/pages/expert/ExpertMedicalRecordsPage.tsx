@@ -378,11 +378,8 @@ export default function ExpertMedicalRecordsPage() {
         {/* Section Documents uploadés (MedicalRecords) */}
         {tab === 'documents' && (
           <div className="space-y-6">
-            {/* ...existing code... */}
-        <div className="space-y-6">
-          {/* ...existing code... */}
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -636,6 +633,8 @@ export default function ExpertMedicalRecordsPage() {
             </div>
           )}
         </motion.div>
+          </div>
+        )}
       </div>
 
       {/* Modal - Détails dossier */}
