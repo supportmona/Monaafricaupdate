@@ -1,4 +1,4 @@
-import { RouterProvider } from "react-router";
+import { RouterProvider } from "react-router-dom";
 import { router } from "@/app/routes";
 import { ExpertAuthProvider } from "@/app/contexts/ExpertAuthContext";
 import { B2BAuthProvider } from "@/app/contexts/B2BAuthContext";
