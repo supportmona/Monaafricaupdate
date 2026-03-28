@@ -9,24 +9,23 @@ import {
   Settings,
   X,
   HelpCircle,
-  ClipboardList,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
 
 interface ExpertSidebarProps {
-  isOpen: boolean;           // mobile: drawer ouvert/fermé
-  onClose: () => void;       // mobile: fermer le drawer
-  collapsed: boolean;        // desktop: sidebar réduite ou non
-  onToggleCollapse: () => void; // desktop: toggle collapse
+  isOpen: boolean;
+  onClose: () => void;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
 const menuItems = [
   { name: "Tableau de bord", path: "/expert/dashboard", icon: LayoutDashboard },
   { name: "Agenda", path: "/expert/agenda", icon: Calendar },
   { name: "Patients", path: "/expert/patients", icon: Users },
-  { name: "Dossiers médicaux", path: "/expert/medical-records", icon: FileText },
-  { name: "Documents", path: "/expert/documents", icon: ClipboardList },
+  // ✅ Fusionné : Dossiers médicaux + Documents + Templates en une seule entrée
+  { name: "Documents & Dossiers", path: "/expert/documents", icon: FileText },
   { name: "Messages", path: "/expert/messages", icon: MessageSquare },
   { name: "Paramètres", path: "/expert/settings", icon: Settings },
 ];
@@ -38,6 +37,15 @@ export default function ExpertSidebar({
   onToggleCollapse,
 }: ExpertSidebarProps) {
   const location = useLocation();
+
+  // ✅ Active si on est sur /expert/documents OU /expert/medical-records
+  const isActive = (path: string) => {
+    if (path === "/expert/documents") {
+      return location.pathname === "/expert/documents" ||
+             location.pathname.startsWith("/expert/medical-records");
+    }
+    return location.pathname === path;
+  };
 
   return (
     <>
@@ -98,7 +106,7 @@ export default function ExpertSidebar({
           <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
             {menuItems.map((item) => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.path;
+              const active = isActive(item.path);
 
               return (
                 <Link
@@ -108,7 +116,7 @@ export default function ExpertSidebar({
                   title={collapsed ? item.name : undefined}
                   className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors
                     ${collapsed ? "justify-center" : ""}
-                    ${isActive
+                    ${active
                       ? "bg-[#1A1A1A] text-white"
                       : "text-[#1A1A1A]/70 hover:bg-[#F5F1ED] hover:text-[#1A1A1A]"
                     }`}
@@ -149,7 +157,7 @@ export default function ExpertSidebar({
             </div>
           )}
 
-          {/* Help icon only when collapsed */}
+          {/* Help icon collapsed */}
           {collapsed && (
             <div className="p-3 border-t border-[#D4C5B9] flex justify-center">
               <a
