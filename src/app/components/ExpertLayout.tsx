@@ -10,7 +10,6 @@ interface ExpertLayoutProps {
   title: string;
 }
 
-// Supprime les préfixes "Dr." ou "Dr " en double
 function cleanName(firstName: string, lastName: string): string {
   const clean = (s: string) => s.replace(/^(Dr\.?\s*)+/i, "").trim();
   return `Dr. ${clean(firstName)} ${clean(lastName)}`.trim();
@@ -19,20 +18,22 @@ function cleanName(firstName: string, lastName: string): string {
 export default function ExpertLayout({ children, title }: ExpertLayoutProps) {
   const navigate = useNavigate();
   const { user, profile, logout } = useExpertAuth();
+
+  // Mobile drawer
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Desktop collapse — persisté dans localStorage
+  const [collapsed, setCollapsed] = useState(() => {
+    return localStorage.getItem("expert_sidebar_collapsed") === "true";
+  });
+
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const firstName =
-    profile?.firstName || user?.user_metadata?.firstName || "";
-  const lastName =
-    profile?.lastName || user?.user_metadata?.lastName || "";
-  const specialty =
-    profile?.specialty || user?.user_metadata?.specialty || "Spécialiste";
-  const email =
-    user?.email || profile?.email || "expert@monafrica.net";
+  const firstName = profile?.firstName || user?.user_metadata?.firstName || "";
+  const lastName = profile?.lastName || user?.user_metadata?.lastName || "";
+  const specialty = profile?.specialty || user?.user_metadata?.specialty || "Spécialiste";
+  const email = user?.email || profile?.email || "expert@monafrica.net";
 
-  // ✅ Nom propre sans "Dr. Dr."
   const displayName = firstName || lastName
     ? cleanName(firstName, lastName)
     : "Expert";
@@ -42,6 +43,12 @@ export default function ExpertLayout({ children, title }: ExpertLayoutProps) {
     const l = lastName.replace(/^(Dr\.?\s*)+/i, "").trim();
     if (f && l) return `${f[0]}${l[0]}`.toUpperCase();
     return "EX";
+  };
+
+  const handleToggleCollapse = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    localStorage.setItem("expert_sidebar_collapsed", String(next));
   };
 
   useEffect(() => {
@@ -62,10 +69,15 @@ export default function ExpertLayout({ children, title }: ExpertLayoutProps) {
   return (
     <div className="min-h-screen bg-[#F5F1ED] flex">
       {/* Sidebar */}
-      <ExpertSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <ExpertSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        collapsed={collapsed}
+        onToggleCollapse={handleToggleCollapse}
+      />
 
-      {/* Main content */}
-      <div className="flex-1 lg:ml-80 flex flex-col min-h-screen">
+      {/* Main content — marge qui s'adapte au collapse */}
+      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${collapsed ? "lg:ml-20" : "lg:ml-80"}`}>
         {/* Header */}
         <header className="bg-white border-b border-[#D4C5B9] sticky top-0 z-30">
           <div className="h-16 px-6 flex items-center justify-between">
@@ -87,7 +99,6 @@ export default function ExpertLayout({ children, title }: ExpertLayoutProps) {
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
               </button>
 
-              {/* Profile menu */}
               <div className="relative" ref={menuRef}>
                 <button
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
@@ -100,9 +111,7 @@ export default function ExpertLayout({ children, title }: ExpertLayoutProps) {
                     {displayName}
                   </span>
                   <ChevronDown
-                    className={`w-4 h-4 text-[#1A1A1A]/60 transition-transform ${
-                      showProfileMenu ? "rotate-180" : ""
-                    }`}
+                    className={`w-4 h-4 text-[#1A1A1A]/60 transition-transform ${showProfileMenu ? "rotate-180" : ""}`}
                   />
                 </button>
 
@@ -114,41 +123,29 @@ export default function ExpertLayout({ children, title }: ExpertLayoutProps) {
                       exit={{ opacity: 0, y: 10 }}
                       className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-[#D4C5B9] overflow-hidden"
                     >
-                      {/* Profil info */}
                       <div className="p-4 border-b border-[#D4C5B9]">
                         <div className="flex items-center gap-3 mb-2">
                           <div className="w-12 h-12 bg-gradient-to-br from-[#A68B6F] to-[#D4C5B9] rounded-full flex items-center justify-center text-white font-medium">
                             {getInitials()}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-[#1A1A1A] truncate">
-                              {displayName}
-                            </p>
-                            <p className="text-xs text-[#1A1A1A]/60 truncate">
-                              {specialty}
-                            </p>
+                            <p className="text-sm font-medium text-[#1A1A1A] truncate">{displayName}</p>
+                            <p className="text-xs text-[#1A1A1A]/60 truncate">{specialty}</p>
                           </div>
                         </div>
                         <p className="text-xs text-[#1A1A1A]/60 truncate">{email}</p>
                       </div>
 
-                      {/* Menu items */}
                       <div className="py-2">
                         <button
-                          onClick={() => {
-                            setShowProfileMenu(false);
-                            navigate("/expert/settings");
-                          }}
+                          onClick={() => { setShowProfileMenu(false); navigate("/expert/settings"); }}
                           className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[#1A1A1A] hover:bg-[#F5F1ED] transition-colors"
                         >
                           <User className="w-4 h-4" />
                           <span>Mon profil</span>
                         </button>
                         <button
-                          onClick={() => {
-                            setShowProfileMenu(false);
-                            navigate("/expert/settings");
-                          }}
+                          onClick={() => { setShowProfileMenu(false); navigate("/expert/settings"); }}
                           className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[#1A1A1A] hover:bg-[#F5F1ED] transition-colors"
                         >
                           <Settings className="w-4 h-4" />
@@ -156,7 +153,6 @@ export default function ExpertLayout({ children, title }: ExpertLayoutProps) {
                         </button>
                       </div>
 
-                      {/* Logout */}
                       <div className="border-t border-[#D4C5B9] py-2">
                         <button
                           onClick={handleLogout}
@@ -174,7 +170,6 @@ export default function ExpertLayout({ children, title }: ExpertLayoutProps) {
           </div>
         </header>
 
-        {/* Contenu de la page */}
         <main className="flex-1">
           {children}
         </main>
