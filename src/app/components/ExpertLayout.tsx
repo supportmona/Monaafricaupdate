@@ -5,38 +5,43 @@ import { motion, AnimatePresence } from "motion/react";
 import ExpertSidebar from "./ExpertSidebar";
 import { useExpertAuth } from "@/app/contexts/ExpertAuthContext";
 
-// Layout principal pour l'interface expert
 interface ExpertLayoutProps {
   children: React.ReactNode;
   title: string;
 }
 
+// Supprime les préfixes "Dr." ou "Dr " en double
+function cleanName(firstName: string, lastName: string): string {
+  const clean = (s: string) => s.replace(/^(Dr\.?\s*)+/i, "").trim();
+  return `Dr. ${clean(firstName)} ${clean(lastName)}`.trim();
+}
+
 export default function ExpertLayout({ children, title }: ExpertLayoutProps) {
   const navigate = useNavigate();
-  const { user, profile } = useExpertAuth();
+  const { user, profile, logout } = useExpertAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const getInitials = () => {
-    if (profile?.firstName && profile?.lastName) {
-      return `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase();
-    }
-    if (user?.user_metadata?.firstName && user?.user_metadata?.lastName) {
-      return `${user.user_metadata.firstName[0]}${user.user_metadata.lastName[0]}`.toUpperCase();
-    }
-    return "EX";
-  };
+  const firstName =
+    profile?.firstName || user?.user_metadata?.firstName || "";
+  const lastName =
+    profile?.lastName || user?.user_metadata?.lastName || "";
+  const specialty =
+    profile?.specialty || user?.user_metadata?.specialty || "Spécialiste";
+  const email =
+    user?.email || profile?.email || "expert@monafrica.net";
 
-  const expertData = {
-    name: profile 
-      ? `${profile.firstName} ${profile.lastName}` 
-      : user?.user_metadata 
-        ? `${user.user_metadata.firstName} ${user.user_metadata.lastName}`
-        : "Expert",
-    specialty: profile?.specialty || user?.user_metadata?.specialty || "Spécialité",
-    avatar: getInitials(),
-    email: user?.email || profile?.email || "expert@monafrica.net"
+  // ✅ Nom propre sans "Dr. Dr."
+  const displayName = firstName || lastName
+    ? cleanName(firstName, lastName)
+    : "Expert";
+
+  const getInitials = () => {
+    const f = firstName.replace(/^(Dr\.?\s*)+/i, "").trim();
+    const l = lastName.replace(/^(Dr\.?\s*)+/i, "").trim();
+    if (f && l) return `${f[0]}${l[0]}`.toUpperCase();
+    return "EX";
   };
 
   useEffect(() => {
@@ -45,14 +50,13 @@ export default function ExpertLayout({ children, title }: ExpertLayoutProps) {
         setShowProfileMenu(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("mona_expert_token");
-    navigate('/expert/login');
+  const handleLogout = async () => {
+    await logout();
+    navigate("/expert/login");
   };
 
   return (
@@ -60,7 +64,7 @@ export default function ExpertLayout({ children, title }: ExpertLayoutProps) {
       {/* Sidebar */}
       <ExpertSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Main content area */}
+      {/* Main content */}
       <div className="flex-1 lg:ml-80 flex flex-col min-h-screen">
         {/* Header */}
         <header className="bg-white border-b border-[#D4C5B9] sticky top-0 z-30">
@@ -78,7 +82,6 @@ export default function ExpertLayout({ children, title }: ExpertLayoutProps) {
 
             {/* Right */}
             <div className="flex items-center gap-3">
-              {/* Notifications */}
               <button className="relative p-2 hover:bg-[#F5F1ED] rounded-lg transition-colors">
                 <Bell className="w-5 h-5 text-[#1A1A1A]" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
@@ -91,10 +94,10 @@ export default function ExpertLayout({ children, title }: ExpertLayoutProps) {
                   className="flex items-center gap-2 hover:bg-[#F5F1ED] rounded-full pr-3 pl-1 py-1 transition-colors"
                 >
                   <div className="w-9 h-9 bg-gradient-to-br from-[#A68B6F] to-[#D4C5B9] rounded-full flex items-center justify-center text-white font-medium text-sm">
-                    {expertData.avatar}
+                    {getInitials()}
                   </div>
                   <span className="text-sm text-[#1A1A1A] hidden sm:inline">
-                    {expertData.name}
+                    {displayName}
                   </span>
                   <ChevronDown
                     className={`w-4 h-4 text-[#1A1A1A]/60 transition-transform ${
@@ -111,24 +114,22 @@ export default function ExpertLayout({ children, title }: ExpertLayoutProps) {
                       exit={{ opacity: 0, y: 10 }}
                       className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-[#D4C5B9] overflow-hidden"
                     >
-                      {/* Profile info */}
+                      {/* Profil info */}
                       <div className="p-4 border-b border-[#D4C5B9]">
                         <div className="flex items-center gap-3 mb-2">
                           <div className="w-12 h-12 bg-gradient-to-br from-[#A68B6F] to-[#D4C5B9] rounded-full flex items-center justify-center text-white font-medium">
-                            {expertData.avatar}
+                            {getInitials()}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-[#1A1A1A] truncate">
-                              {expertData.name}
+                              {displayName}
                             </p>
                             <p className="text-xs text-[#1A1A1A]/60 truncate">
-                              {expertData.specialty}
+                              {specialty}
                             </p>
                           </div>
                         </div>
-                        <p className="text-xs text-[#1A1A1A]/60 truncate">
-                          {expertData.email}
-                        </p>
+                        <p className="text-xs text-[#1A1A1A]/60 truncate">{email}</p>
                       </div>
 
                       {/* Menu items */}
@@ -173,7 +174,7 @@ export default function ExpertLayout({ children, title }: ExpertLayoutProps) {
           </div>
         </header>
 
-        {/* Page content - FULL WIDTH */}
+        {/* Contenu de la page */}
         <main className="flex-1">
           {children}
         </main>
