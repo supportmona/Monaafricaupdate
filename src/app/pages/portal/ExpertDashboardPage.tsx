@@ -8,16 +8,14 @@ import {
   Video,
   Clock,
   TrendingUp,
-  Bell,
-  Settings,
-  LogOut,
-  Upload,
-  Download,
 } from "lucide-react";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
+import { useExpertAuth } from "@/app/contexts/ExpertAuthContext";
+import ExpertLayout from "@/app/components/ExpertLayout";
 
 export default function ExpertDashboardPage() {
-  const [expertProfile, setExpertProfile] = useState<any>(null);
+  const { accessToken, profile } = useExpertAuth();
+
   const [stats, setStats] = useState({
     todayConsultations: 0,
     weekConsultations: 0,
@@ -30,36 +28,24 @@ export default function ExpertDashboardPage() {
 
   useEffect(() => {
     loadDashboardData();
-  }, []);
+  }, [accessToken]);
 
   const loadDashboardData = async () => {
+    // ✅ Utilise le token du contexte, pas l'ancien "mona_expert_token"
+    const token = accessToken || localStorage.getItem("expert_access_token");
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      const token = localStorage.getItem("mona_expert_token");
-      if (!token) return;
-
-      // Get expert profile
-      const profileRes = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-6378cc81/expert/profile`,
-        {
-          headers: {
-            Authorization: `Bearer ${publicAnonKey}`,
-            "X-Expert-Token": token,
-          },
-        }
-      );
-
-      if (profileRes.ok) {
-        const profileData = await profileRes.json();
-        setExpertProfile(profileData.data);
-      }
-
-      // Get patients list
+      // Patients
       const patientsRes = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-6378cc81/expert/patients/list`,
         {
           headers: {
-            Authorization: `Bearer ${publicAnonKey}`,
-            "X-Expert-Token": token,
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
         }
       );
@@ -68,35 +54,15 @@ export default function ExpertDashboardPage() {
         const patientsData = await patientsRes.json();
         const patients = patientsData.data || [];
         setRecentPatients(patients.slice(0, 5));
-        
-        setStats(prev => ({
-          ...prev,
-          totalPatients: patients.length,
-        }));
+        setStats(prev => ({ ...prev, totalPatients: patients.length }));
       }
 
-      // Mock upcoming consultations (à remplacer par vraie API)
-      setUpcomingConsultations([
-        {
-          id: "1",
-          patientName: "Marie Kouassi",
-          time: "14:00",
-          type: "Suivi régulier",
-          status: "confirmed",
-        },
-        {
-          id: "2",
-          patientName: "Jean Nkomo",
-          time: "15:30",
-          type: "Première consultation",
-          status: "confirmed",
-        },
-      ]);
-
+      // Consultations à venir (mock — à remplacer par vraie API)
+      setUpcomingConsultations([]);
       setStats(prev => ({
         ...prev,
-        todayConsultations: 2,
-        weekConsultations: 8,
+        todayConsultations: 0,
+        weekConsultations: 0,
       }));
 
     } catch (error) {
@@ -106,59 +72,33 @@ export default function ExpertDashboardPage() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("mona_expert_token");
-    window.location.href = "/expert/login";
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F5F1ED] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#A68B6F] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-[#1A1A1A]/60">Chargement...</p>
+      <ExpertLayout title="Tableau de bord">
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-[#A68B6F] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-[#1A1A1A]/60">Chargement...</p>
+          </div>
         </div>
-      </div>
+      </ExpertLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F1ED]">
-      {/* Header */}
-      <header className="bg-white border-b border-[#D4C5B9]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-serif text-[#1A1A1A]">
-                Portail Expert
-              </h1>
-              <p className="text-sm text-[#1A1A1A]/60 mt-1">
-                Bienvenue, Dr. {expertProfile?.firstName || "Expert"}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button className="p-2 hover:bg-[#F5F1ED] rounded-full transition-colors">
-                <Bell className="w-5 h-5 text-[#1A1A1A]/60" />
-              </button>
-              <Link
-                to="/expert/settings"
-                className="p-2 hover:bg-[#F5F1ED] rounded-full transition-colors"
-              >
-                <Settings className="w-5 h-5 text-[#1A1A1A]/60" />
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-full transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-                Déconnexion
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
+    <ExpertLayout title="Tableau de bord">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        {/* Salutation */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-serif text-[#1A1A1A]">
+            Bonjour, Dr. {profile?.lastName || "Expert"} 👋
+          </h2>
+          <p className="text-sm text-[#1A1A1A]/60 mt-1">
+            Voici un aperçu de votre activité
+          </p>
+        </div>
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <motion.div
@@ -259,9 +199,7 @@ export default function ExpertDashboardPage() {
               <div className="w-14 h-14 bg-[#A68B6F]/10 rounded-full flex items-center justify-center group-hover:bg-[#A68B6F] transition-colors">
                 <Users className="w-7 h-7 text-[#A68B6F] group-hover:text-white transition-colors" />
               </div>
-              <span className="text-sm font-medium text-[#1A1A1A]">
-                Mes patients
-              </span>
+              <span className="text-sm font-medium text-[#1A1A1A]">Mes patients</span>
             </Link>
 
             <Link
@@ -271,9 +209,7 @@ export default function ExpertDashboardPage() {
               <div className="w-14 h-14 bg-[#C1694F]/10 rounded-full flex items-center justify-center group-hover:bg-[#C1694F] transition-colors">
                 <Calendar className="w-7 h-7 text-[#C1694F] group-hover:text-white transition-colors" />
               </div>
-              <span className="text-sm font-medium text-[#1A1A1A]">
-                Calendrier
-              </span>
+              <span className="text-sm font-medium text-[#1A1A1A]">Calendrier</span>
             </Link>
 
             <Link
@@ -283,27 +219,24 @@ export default function ExpertDashboardPage() {
               <div className="w-14 h-14 bg-green-500/10 rounded-full flex items-center justify-center group-hover:bg-green-500 transition-colors">
                 <FileText className="w-7 h-7 text-green-500 group-hover:text-white transition-colors" />
               </div>
-              <span className="text-sm font-medium text-[#1A1A1A]">
-                Documents
-              </span>
+              <span className="text-sm font-medium text-[#1A1A1A]">Documents</span>
             </Link>
 
             <Link
-              to="/expert/consultations"
+              to="/expert/agenda"
               className="flex flex-col items-center gap-3 p-4 hover:bg-[#F5F1ED] rounded-xl transition-colors group"
             >
               <div className="w-14 h-14 bg-blue-500/10 rounded-full flex items-center justify-center group-hover:bg-blue-500 transition-colors">
                 <Video className="w-7 h-7 text-blue-500 group-hover:text-white transition-colors" />
               </div>
-              <span className="text-sm font-medium text-[#1A1A1A]">
-                Consultations
-              </span>
+              <span className="text-sm font-medium text-[#1A1A1A]">Consultations</span>
             </Link>
           </div>
         </motion.div>
 
+        {/* Bottom grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Upcoming Consultations */}
+          {/* Consultations à venir */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -315,7 +248,7 @@ export default function ExpertDashboardPage() {
                 Consultations à venir
               </h2>
               <Link
-                to="/expert/consultations"
+                to="/expert/agenda"
                 className="text-sm text-[#A68B6F] hover:text-[#8A7159] transition-colors"
               >
                 Voir tout
@@ -331,30 +264,24 @@ export default function ExpertDashboardPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {upcomingConsultations.map((consultation) => (
+                {upcomingConsultations.map((c) => (
                   <div
-                    key={consultation.id}
+                    key={c.id}
                     className="flex items-center justify-between p-4 bg-[#F5F1ED] rounded-xl"
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-[#A68B6F] rounded-full flex items-center justify-center text-white font-semibold">
-                        {consultation.patientName.charAt(0)}
+                        {c.patientName.charAt(0)}
                       </div>
                       <div>
-                        <p className="font-medium text-[#1A1A1A]">
-                          {consultation.patientName}
-                        </p>
-                        <p className="text-sm text-[#1A1A1A]/60">
-                          {consultation.type}
-                        </p>
+                        <p className="font-medium text-[#1A1A1A]">{c.patientName}</p>
+                        <p className="text-sm text-[#1A1A1A]/60">{c.type}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold text-[#1A1A1A]">
-                        {consultation.time}
-                      </p>
+                      <p className="text-sm font-semibold text-[#1A1A1A]">{c.time}</p>
                       <Link
-                        to={`/expert/consultation-room/${consultation.id}`}
+                        to={`/expert/consultation-room/${c.id}`}
                         className="text-xs text-[#A68B6F] hover:text-[#8A7159] transition-colors"
                       >
                         Rejoindre
@@ -366,7 +293,7 @@ export default function ExpertDashboardPage() {
             )}
           </motion.div>
 
-          {/* Recent Patients */}
+          {/* Patients récents */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -405,9 +332,7 @@ export default function ExpertDashboardPage() {
                         {patient.name?.charAt(0) || "P"}
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-[#1A1A1A]">
-                          {patient.name}
-                        </p>
+                        <p className="text-sm font-medium text-[#1A1A1A]">{patient.name}</p>
                         <p className="text-xs text-[#1A1A1A]/60">
                           {patient.consultationsCount} consultation
                           {patient.consultationsCount > 1 ? "s" : ""}
@@ -422,6 +347,6 @@ export default function ExpertDashboardPage() {
           </motion.div>
         </div>
       </div>
-    </div>
+    </ExpertLayout>
   );
 }
