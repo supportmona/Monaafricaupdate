@@ -1,1 +1,274 @@
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+const CORS = {
+  'Access-Control-Allow-Origin': 'https://monafrica.net',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type, x-expert-token',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
+const FROM_EMAIL = 'MONA Africa <noreply@monafrica.net>'
+
+// ─── Utilitaires (dupliqués depuis emailService pour l'autonomie Deno) ────────
+
+function generateExpertEmail(fullName: string, suffix?: number): string {
+  const normalized = fullName
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z\s]/g, '')
+    .split(/\s+/)
+
+  const [first, ...rest] = normalized
+  const last = rest.join('') || first
+  const base = `${first}.${last}@monafrica.net`
+  return suffix ? `${first}.${last}${suffix}@monafrica.net` : base
+}
+
+function generateTempPassword(): string {
+  const UP = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
+  const LO = 'abcdefghjkmnpqrstuvwxyz'
+  const DI = '23456789'
+  const SP = '!@#$%&*'
+
+  function pick(s: string, n: number) {
+    return Array.from({ length: n }, () => s[Math.floor(Math.random() * s.length)]).join('')
+  }
+
+  const raw = pick(UP, 2) + pick(DI, 2) + pick(SP, 1) + pick(LO, 7)
+  const arr = raw.split('')
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr.join('')
+}
+
+// ─── Envoi email via Resend ───────────────────────────────────────────────────
+
+async function sendEmail(to: string, subject: string, html: string) {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ from: FROM_EMAIL, to, subject, html }),
+  })
+
+  if (!res.ok) {
+    const body = await res.text()
+    throw new Error(`Resend error ${res.status}: ${body}`)
+  }
+}
+
+// ─── Templates ────────────────────────────────────────────────────────────────
+
+function approvalEmailHtml(params: {
+  expertName: string
+  specialty: string
+  email: string
+  tempPassword: string
+}): string {
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
+<style>
+body{font-family:-apple-system,sans-serif;background:#f8f7f5;margin:0;padding:40px 20px}
+.card{background:#fff;border-radius:16px;padding:40px;max-width:560px;margin:0 auto}
+.logo{text-align:center;margin-bottom:32px;font-size:22px;font-weight:700;color:#6d28d9}
+h1{font-size:20px;font-weight:700;color:#111827;margin:0 0 12px}
+p{font-size:15px;line-height:1.6;color:#4b5563;margin:0 0 16px}
+.box{background:#f5f3ff;border:1px solid #e0d9ff;border-radius:12px;padding:20px 24px;margin:24px 0}
+.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e9e6ff}
+.row:last-child{border-bottom:none}
+.label{font-size:13px;color:#6d28d9;font-weight:600}
+.val{font-size:14px;font-family:monospace;color:#111827;font-weight:700}
+.btn{display:inline-block;background:#7c3aed;color:#fff!important;text-decoration:none;padding:14px 28px;border-radius:10px;font-size:15px;font-weight:600;margin:8px 0 24px}
+.warn{background:#fffbeb;border:1px solid #fbbf24;border-radius:10px;padding:14px 18px;font-size:13px;color:#92400e}
+.foot{text-align:center;font-size:12px;color:#9ca3af;margin-top:32px}
+</style></head><body><div class="card">
+<div class="logo">MONA Africa</div>
+<h1>Bienvenue, Dr. ${params.expertName} !</h1>
+<p>Votre candidature en tant qu'expert <strong>${params.specialty}</strong> a été <strong style="color:#059669">approuvée</strong>. Voici vos identifiants d'accès à votre portail expert.</p>
+<div class="box">
+  <p style="margin:0 0 12px;font-size:13px;font-weight:600;color:#6d28d9">Vos identifiants de connexion</p>
+  <div class="row"><span class="label">Email</span><span class="val">${params.email}</span></div>
+  <div class="row"><span class="label">Mot de passe temporaire</span><span class="val">${params.tempPassword}</span></div>
+</div>
+<a href="https://monafrica.net/expert/login" class="btn">Accéder à mon portail →</a>
+<div class="warn"><strong>Important :</strong> Modifiez ce mot de passe dès votre première connexion.</div>
+<div class="foot">© ${new Date().getFullYear()} MONA Africa · <a href="https://monafrica.net" style="color:#6d28d9">monafrica.net</a></div>
+</div></body></html>`
+}
+
+function rejectionEmailHtml(params: {
+  expertName: string
+  reason?: string
+}): string {
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
+<style>
+body{font-family:-apple-system,sans-serif;background:#f8f7f5;margin:0;padding:40px 20px}
+.card{background:#fff;border-radius:16px;padding:40px;max-width:560px;margin:0 auto}
+.logo{text-align:center;margin-bottom:32px;font-size:22px;font-weight:700;color:#6d28d9}
+h1{font-size:20px;font-weight:700;color:#111827;margin:0 0 12px}
+p{font-size:15px;line-height:1.6;color:#4b5563;margin:0 0 16px}
+.quote{background:#f9fafb;border-left:4px solid #e5e7eb;padding:14px 18px;border-radius:0 8px 8px 0;margin:20px 0}
+.foot{text-align:center;font-size:12px;color:#9ca3af;margin-top:32px}
+</style></head><body><div class="card">
+<div class="logo">MONA Africa</div>
+<h1>Réponse à votre candidature</h1>
+<p>Bonjour Dr. ${params.expertName},</p>
+<p>Après examen de votre dossier, notre équipe n'est pas en mesure d'approuver votre candidature pour le moment.</p>
+${params.reason ? `<div class="quote"><p style="margin:0;font-style:italic">"${params.reason}"</p></div>` : ''}
+<p>Vous pouvez soumettre une nouvelle candidature dans <strong>90 jours</strong> avec des documents à jour.</p>
+<p style="font-size:13px;color:#9ca3af">Questions ? <a href="mailto:support@monafrica.net" style="color:#6d28d9">support@monafrica.net</a></p>
+<div class="foot">© ${new Date().getFullYear()} MONA Africa · <a href="https://monafrica.net" style="color:#6d28d9">monafrica.net</a></div>
+</div></body></html>`
+}
+
+// ─── Handler principal ────────────────────────────────────────────────────────
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: CORS })
+  }
+
+  const json = (data: unknown, status = 200) =>
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+    })
+
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    const { expert_id, action, reason } = await req.json()
+
+    if (!expert_id || !['approve', 'reject'].includes(action)) {
+      return json({ error: 'Paramètres invalides' }, 400)
+    }
+
+    // Récupérer l'expert
+    const { data: expert, error: fetchErr } = await supabase
+      .from('experts')
+      .select('id, full_name, email, specialty, status')
+      .eq('id', expert_id)
+      .single()
+
+    if (fetchErr || !expert) {
+      return json({ error: 'Expert introuvable' }, 404)
+    }
+
+    if (expert.status === 'approved' || expert.status === 'rejected') {
+      return json({ error: `Expert déjà ${expert.status}` }, 409)
+    }
+
+    // ── Approbation ──────────────────────────────────────────────────────────
+    if (action === 'approve') {
+      const expertEmail = generateExpertEmail(expert.full_name)
+      const tempPassword = generateTempPassword()
+
+      // Vérifier unicité de l'email
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', expertEmail)
+        .maybeSingle()
+
+      const finalEmail = existing
+        ? generateExpertEmail(expert.full_name, Date.now() % 9000 + 1000)
+        : expertEmail
+
+      // Créer le compte Supabase Auth
+      const { data: authUser, error: authErr } = await supabase.auth.admin.createUser({
+        email: finalEmail,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: {
+          full_name: expert.full_name,
+          role: 'expert',
+          expert_id: expert.id,
+        },
+      })
+
+      if (authErr) {
+        throw new Error(`Erreur création Auth : ${authErr.message}`)
+      }
+
+      // Mettre à jour la table experts
+      await supabase
+        .from('experts')
+        .update({
+          status: 'approved',
+          generated_email: finalEmail,
+          auth_user_id: authUser.user.id,
+          approved_at: new Date().toISOString(),
+          rejection_reason: null,
+        })
+        .eq('id', expert_id)
+
+      // Envoyer l'email d'approbation
+      await sendEmail(
+        finalEmail,
+        'Votre compte MONA Africa expert est activé',
+        approvalEmailHtml({
+          expertName: expert.full_name,
+          specialty: expert.specialty,
+          email: finalEmail,
+          tempPassword,
+        })
+      )
+
+      // Notifier aussi l'email de candidature si différent
+      if (expert.email && expert.email !== finalEmail) {
+        await sendEmail(
+          expert.email,
+          'Votre candidature MONA Africa a été approuvée',
+          approvalEmailHtml({
+            expertName: expert.full_name,
+            specialty: expert.specialty,
+            email: finalEmail,
+            tempPassword,
+          })
+        )
+      }
+
+      return json({
+        success: true,
+        expert_id,
+        generated_email: finalEmail,
+        message: 'Expert approuvé et email envoyé',
+      })
+    }
+
+    // ── Rejet ────────────────────────────────────────────────────────────────
+    if (action === 'reject') {
+      await supabase
+        .from('experts')
+        .update({
+          status: 'rejected',
+          rejected_at: new Date().toISOString(),
+          rejection_reason: reason ?? null,
+        })
+        .eq('id', expert_id)
+
+      if (expert.email) {
+        await sendEmail(
+          expert.email,
+          'Suite à votre candidature MONA Africa',
+          rejectionEmailHtml({ expertName: expert.full_name, reason })
+        )
+      }
+
+      return json({ success: true, expert_id, message: 'Expert rejeté et email envoyé' })
+    }
+  } catch (err) {
+    console.error('approve-expert error:', err)
+    return json({ error: String(err) }, 500)
+  }
+})
