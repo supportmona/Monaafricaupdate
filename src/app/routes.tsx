@@ -111,6 +111,7 @@ const InvoicesPage = lazy(() => import("@/app/pages/portal/InvoicesPage"));
 const ExpertLoginPage = lazy(() => import("@/app/pages/expert/ExpertLoginPage"));
 const ExpertDashboardPage = lazy(() => import("@/app/pages/portal/ExpertDashboardPage"));
 const ExpertAgendaPage = lazy(() => import("@/app/pages/expert/ExpertAgendaPage"));
+const ExpertAvailabilityPage = lazy(() => import("@/app/pages/expert/ExpertAvailabilityPage")); // ✅ NOUVEAU
 const ExpertPatientsPage = lazy(() => import("@/app/pages/portal/ExpertPatientsPage"));
 const ExpertPatientDetailPage = lazy(() => import("@/app/pages/portal/ExpertPatientDetailPage"));
 const ExpertMedicalRecordDetailPage = lazy(() => import("@/app/pages/expert/ExpertMedicalRecordDetailPage"));
@@ -287,11 +288,10 @@ export const router = createBrowserRouter([
   { path: "/expert/login", element: <SuspenseWrapper><ExpertLoginPage /></SuspenseWrapper> },
   { path: "/expert/dashboard", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertDashboardPage /></ExpertProtectedRoute></SuspenseWrapper> },
   { path: "/expert/agenda", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertAgendaPage /></ExpertProtectedRoute></SuspenseWrapper> },
+  { path: "/expert/availability", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertAvailabilityPage /></ExpertProtectedRoute></SuspenseWrapper> }, // ✅ NOUVEAU
   { path: "/expert/patients", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertPatientsPage /></ExpertProtectedRoute></SuspenseWrapper> },
   { path: "/expert/patients/:patientId", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertPatientDetailPage /></ExpertProtectedRoute></SuspenseWrapper> },
-  // ✅ Route unifiée — remplace /expert/medical-records ET /expert/documents
   { path: "/expert/documents", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertDocumentsUnifiedPage /></ExpertProtectedRoute></SuspenseWrapper> },
-  // ✅ Garde la route /expert/medical-records pour ne pas casser les liens existants
   { path: "/expert/medical-records", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertDocumentsUnifiedPage /></ExpertProtectedRoute></SuspenseWrapper> },
   { path: "/expert/medical-records/:id", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertMedicalRecordDetailPage /></ExpertProtectedRoute></SuspenseWrapper> },
   { path: "/expert/calendar", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertCalendarPage /></ExpertProtectedRoute></SuspenseWrapper> },
