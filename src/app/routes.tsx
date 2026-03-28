@@ -4,7 +4,6 @@ import AdminProtectedRoute from "@/app/components/AdminProtectedRoute";
 import MemberProtectedRoute from "@/app/components/MemberProtectedRoute";
 import ExpertProtectedRoute from "@/app/components/ExpertProtectedRoute";
 import CompanyProtectedRoute from "@/app/components/CompanyProtectedRoute";
-// Import direct pour éviter les suspensions synchrones lors de l'auth
 import AdminLoginPage from "@/app/pages/admin/AdminLoginPage";
 import AdminDashboardPage from "@/app/pages/admin/AdminDashboardPage";
 import AdminLoginTestPage from "@/app/pages/admin/AdminLoginTestPage";
@@ -114,18 +113,19 @@ const ExpertDashboardPage = lazy(() => import("@/app/pages/portal/ExpertDashboar
 const ExpertAgendaPage = lazy(() => import("@/app/pages/expert/ExpertAgendaPage"));
 const ExpertPatientsPage = lazy(() => import("@/app/pages/portal/ExpertPatientsPage"));
 const ExpertPatientDetailPage = lazy(() => import("@/app/pages/portal/ExpertPatientDetailPage"));
-const ExpertMedicalRecordsPage = lazy(() => import("@/app/pages/expert/ExpertMedicalRecordsPage"));
 const ExpertMedicalRecordDetailPage = lazy(() => import("@/app/pages/expert/ExpertMedicalRecordDetailPage"));
 const ExpertConsultationRoomPage = lazy(() => import("@/app/pages/expert/ExpertConsultationRoomPage"));
 const ExpertSettingsPage = lazy(() => import("@/app/pages/expert/ExpertSettingsPage"));
 const PrescriptionPage = lazy(() => import("@/app/pages/expert/PrescriptionPage"));
 const CarePlanPage = lazy(() => import("@/app/pages/expert/CarePlanPage"));
-const ExpertDocumentsPage = lazy(() => import("@/app/pages/portal/ExpertDocumentsPage"));
 const ExpertCalendarPage = lazy(() => import("@/app/pages/portal/ExpertCalendarPage"));
 const ChatPage = lazy(() => import("@/app/pages/portal/ChatPage"));
 const MedicalCertificatePage = lazy(() => import("@/app/pages/expert/MedicalCertificatePage"));
 const MedicalReportPage = lazy(() => import("@/app/pages/expert/MedicalReportPage"));
 const ReferralLetterPage = lazy(() => import("@/app/pages/expert/ReferralLetterPage"));
+
+// ✅ Page unifiée Documents + Dossiers + Templates + Historique
+const ExpertDocumentsUnifiedPage = lazy(() => import("@/app/pages/portal/ExpertDocumentsUnifiedPage"));
 
 // Company Portal Pages
 const CompanyDashboardPage = lazy(() => import("@/app/pages/portal/CompanyDashboardPage"));
@@ -135,7 +135,7 @@ const CompanyAnalyticsPage = lazy(() => import("@/app/pages/portal/CompanyAnalyt
 const CompanySettingsPage = lazy(() => import("@/app/pages/portal/CompanySettingsPage"));
 const CompanySubscriptionPage = lazy(() => import("@/app/pages/portal/CompanySubscriptionPage"));
 
-// Admin Pages - AdminLoginPage et AdminDashboardPage sont importés directement ci-dessus
+// Admin Pages
 const AdminUsersPage = lazy(() => import("@/app/pages/admin/AdminUsersPage"));
 const AdminExpertsPage = lazy(() => import("@/app/pages/admin/AdminExpertsPage"));
 const AdminDataDiagnosticPage = lazy(() => import("@/app/pages/admin/AdminDataDiagnosticPage"));
@@ -145,33 +145,26 @@ const AdminAnalyticsPage = lazy(() => import("@/app/pages/admin/AdminAnalyticsPa
 const AdminFinancesPage = lazy(() => import("@/app/pages/admin/AdminFinancesPage"));
 const AdminSettingsPage = lazy(() => import("@/app/pages/admin/AdminSettingsPage"));
 
-// RH Pages (Équipe M.O.N.A)
+// RH Pages
 const RHLoginPage = lazy(() => import("@/app/pages/rh/RHLoginPage"));
 const RHDashboardPage = lazy(() => import("@/app/pages/rh/RHDashboardPage"));
 const RHTeamPage = lazy(() => import("@/app/pages/rh/RHTeamPage"));
 const RHExpertsPage = lazy(() => import("@/app/pages/rh/RHExpertsPage"));
 
-// Entreprise Pages (Vrais comptes B2B)
+// Entreprise Pages
 const EntrepriseLoginPage = lazy(() => import("@/app/pages/entreprise/EntrepriseLoginPage"));
 const EntrepriseDashboardPage = lazy(() => import("@/app/pages/entreprise/EntrepriseDashboardPage"));
 const EntrepriseEmployeesPage = lazy(() => import("@/app/pages/entreprise/EntrepriseEmployeesPage"));
 
-// Loading fallback component
 const LoadingFallback = () => (
-  <div style={{ 
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    minHeight: '100vh',
-    fontFamily: 'system-ui',
-    fontSize: '18px',
-    color: '#666'
+  <div style={{
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    minHeight: '100vh', fontFamily: 'system-ui', fontSize: '18px', color: '#666'
   }}>
     Chargement...
   </div>
 );
 
-// Wrapper component for Suspense
 const SuspenseWrapper = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<LoadingFallback />}>
     {children}
@@ -296,12 +289,13 @@ export const router = createBrowserRouter([
   { path: "/expert/agenda", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertAgendaPage /></ExpertProtectedRoute></SuspenseWrapper> },
   { path: "/expert/patients", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertPatientsPage /></ExpertProtectedRoute></SuspenseWrapper> },
   { path: "/expert/patients/:patientId", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertPatientDetailPage /></ExpertProtectedRoute></SuspenseWrapper> },
-  { path: "/expert/medical-records", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertMedicalRecordsPage /></ExpertProtectedRoute></SuspenseWrapper> },
+  // ✅ Route unifiée — remplace /expert/medical-records ET /expert/documents
+  { path: "/expert/documents", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertDocumentsUnifiedPage /></ExpertProtectedRoute></SuspenseWrapper> },
+  // ✅ Garde la route /expert/medical-records pour ne pas casser les liens existants
+  { path: "/expert/medical-records", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertDocumentsUnifiedPage /></ExpertProtectedRoute></SuspenseWrapper> },
   { path: "/expert/medical-records/:id", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertMedicalRecordDetailPage /></ExpertProtectedRoute></SuspenseWrapper> },
-  { path: "/expert/documents", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertDocumentsPage /></ExpertProtectedRoute></SuspenseWrapper> },
   { path: "/expert/calendar", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertCalendarPage /></ExpertProtectedRoute></SuspenseWrapper> },
   { path: "/expert/messages", element: <SuspenseWrapper><ExpertProtectedRoute><ChatPage /></ExpertProtectedRoute></SuspenseWrapper> },
-  { path: "/member/messages", element: <SuspenseWrapper><MemberProtectedRoute><ChatPage /></MemberProtectedRoute></SuspenseWrapper> },
   { path: "/expert/consultation-room/:id", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertConsultationRoomPage /></ExpertProtectedRoute></SuspenseWrapper> },
   { path: "/expert/settings", element: <SuspenseWrapper><ExpertProtectedRoute><ExpertSettingsPage /></ExpertProtectedRoute></SuspenseWrapper> },
   { path: "/expert/prescription-template", element: <SuspenseWrapper><ExpertProtectedRoute><PrescriptionPage /></ExpertProtectedRoute></SuspenseWrapper> },
@@ -342,6 +336,6 @@ export const router = createBrowserRouter([
   { path: "/entreprise/dashboard", element: <SuspenseWrapper><EntrepriseDashboardPage /></SuspenseWrapper> },
   { path: "/entreprise/employees", element: <SuspenseWrapper><EntrepriseEmployeesPage /></SuspenseWrapper> },
 
-  // 404 - Must be last
+  // 404
   { path: "*", element: <SuspenseWrapper><NotFoundPage /></SuspenseWrapper> },
 ]);
