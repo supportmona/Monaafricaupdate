@@ -7,17 +7,17 @@ interface ExpertProtectedRouteProps {
 }
 
 export default function ExpertProtectedRoute({ children }: ExpertProtectedRouteProps) {
-  const { isAuthenticated, loading } = useExpertAuth();
+  const { user, loading } = useExpertAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
+    if (!loading && !user) {
       console.warn("⚠️ Accès non autorisé au portail expert - Redirection vers /expert/login");
       navigate("/expert/login", { replace: true });
     }
-  }, [isAuthenticated, loading, navigate]);
+  }, [user, loading, navigate]);
 
-  // Afficher un loader pendant la vérification
+  // Pendant la vérification de session → loader
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F5F1ED] flex items-center justify-center">
@@ -29,11 +29,11 @@ export default function ExpertProtectedRoute({ children }: ExpertProtectedRouteP
     );
   }
 
-  // Si non authentifié, ne rien afficher (la redirection se fait dans useEffect)
-  if (!isAuthenticated) {
+  // Pas connecté → null (useEffect gère la redirection)
+  if (!user) {
     return null;
   }
 
-  // Utilisateur authentifié, afficher le contenu
+  // Connecté → on affiche
   return <>{children}</>;
 }
