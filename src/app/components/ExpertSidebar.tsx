@@ -11,6 +11,7 @@ import {
   HelpCircle,
   ChevronLeft,
   ChevronRight,
+  Clock,
 } from "lucide-react";
 
 interface ExpertSidebarProps {
@@ -23,8 +24,8 @@ interface ExpertSidebarProps {
 const menuItems = [
   { name: "Tableau de bord", path: "/expert/dashboard", icon: LayoutDashboard },
   { name: "Agenda", path: "/expert/agenda", icon: Calendar },
+  { name: "Disponibilités", path: "/expert/availability", icon: Clock },
   { name: "Patients", path: "/expert/patients", icon: Users },
-  // ✅ Fusionné : Dossiers médicaux + Documents + Templates en une seule entrée
   { name: "Documents & Dossiers", path: "/expert/documents", icon: FileText },
   { name: "Messages", path: "/expert/messages", icon: MessageSquare },
   { name: "Paramètres", path: "/expert/settings", icon: Settings },
@@ -38,7 +39,6 @@ export default function ExpertSidebar({
 }: ExpertSidebarProps) {
   const location = useLocation();
 
-  // ✅ Active si on est sur /expert/documents OU /expert/medical-records
   const isActive = (path: string) => {
     if (path === "/expert/documents") {
       return location.pathname === "/expert/documents" ||
@@ -49,7 +49,6 @@ export default function ExpertSidebar({
 
   return (
     <>
-      {/* Overlay mobile */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -62,7 +61,6 @@ export default function ExpertSidebar({
         )}
       </AnimatePresence>
 
-      {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 h-full bg-white border-r border-[#D4C5B9] z-50 transition-all duration-300
           ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
@@ -79,26 +77,11 @@ export default function ExpertSidebar({
                 <p className="text-xs text-[#1A1A1A]/60 mt-1">Portail Expert</p>
               </div>
             )}
-
-            {/* Bouton fermer mobile */}
-            <button
-              onClick={onClose}
-              className="lg:hidden p-2 hover:bg-[#F5F1ED] rounded-lg transition-colors"
-            >
+            <button onClick={onClose} className="lg:hidden p-2 hover:bg-[#F5F1ED] rounded-lg transition-colors">
               <X className="w-5 h-5" />
             </button>
-
-            {/* Bouton collapse desktop */}
-            <button
-              onClick={onToggleCollapse}
-              className="hidden lg:flex p-2 hover:bg-[#F5F1ED] rounded-lg transition-colors"
-              title={collapsed ? "Ouvrir la sidebar" : "Réduire la sidebar"}
-            >
-              {collapsed ? (
-                <ChevronRight className="w-5 h-5 text-[#1A1A1A]/60" />
-              ) : (
-                <ChevronLeft className="w-5 h-5 text-[#1A1A1A]/60" />
-              )}
+            <button onClick={onToggleCollapse} className="hidden lg:flex p-2 hover:bg-[#F5F1ED] rounded-lg transition-colors" title={collapsed ? "Ouvrir la sidebar" : "Réduire la sidebar"}>
+              {collapsed ? <ChevronRight className="w-5 h-5 text-[#1A1A1A]/60" /> : <ChevronLeft className="w-5 h-5 text-[#1A1A1A]/60" />}
             </button>
           </div>
 
@@ -107,7 +90,6 @@ export default function ExpertSidebar({
             {menuItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.path);
-
               return (
                 <Link
                   key={item.path}
@@ -116,15 +98,10 @@ export default function ExpertSidebar({
                   title={collapsed ? item.name : undefined}
                   className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors
                     ${collapsed ? "justify-center" : ""}
-                    ${active
-                      ? "bg-[#1A1A1A] text-white"
-                      : "text-[#1A1A1A]/70 hover:bg-[#F5F1ED] hover:text-[#1A1A1A]"
-                    }`}
+                    ${active ? "bg-[#1A1A1A] text-white" : "text-[#1A1A1A]/70 hover:bg-[#F5F1ED] hover:text-[#1A1A1A]"}`}
                 >
                   <Icon className="w-5 h-5 flex-shrink-0" />
-                  {!collapsed && (
-                    <span className="text-sm font-medium">{item.name}</span>
-                  )}
+                  {!collapsed && <span className="text-sm font-medium">{item.name}</span>}
                 </Link>
               );
             })}
@@ -139,32 +116,18 @@ export default function ExpertSidebar({
                     <HelpCircle className="w-4 h-4 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-[#1A1A1A] mb-1">
-                      Besoin d'aide ?
-                    </p>
-                    <p className="text-xs text-[#1A1A1A]/60 mb-3">
-                      Support technique disponible 24/7
-                    </p>
-                    <a
-                      href="mailto:support@monafrica.net"
-                      className="text-xs text-[#A68B6F] hover:underline"
-                    >
-                      Contacter le support
-                    </a>
+                    <p className="text-sm font-medium text-[#1A1A1A] mb-1">Besoin d'aide ?</p>
+                    <p className="text-xs text-[#1A1A1A]/60 mb-3">Support technique disponible 24/7</p>
+                    <a href="mailto:support@monafrica.net" className="text-xs text-[#A68B6F] hover:underline">Contacter le support</a>
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Help icon collapsed */}
           {collapsed && (
             <div className="p-3 border-t border-[#D4C5B9] flex justify-center">
-              <a
-                href="mailto:support@monafrica.net"
-                title="Contacter le support"
-                className="p-2 hover:bg-[#F5F1ED] rounded-lg transition-colors"
-              >
+              <a href="mailto:support@monafrica.net" title="Contacter le support" className="p-2 hover:bg-[#F5F1ED] rounded-lg transition-colors">
                 <HelpCircle className="w-5 h-5 text-[#A68B6F]" />
               </a>
             </div>
