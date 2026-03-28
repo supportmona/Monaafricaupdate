@@ -71,16 +71,13 @@ export default function AdminDashboardPage() {
 
   const loadBookings = async () => {
     try {
-      // Charger depuis la table bookings SQL
-      const { createClient } = await import("@supabase/supabase-js").catch(() => ({ createClient: null }));
-      // Fallback: charger via l'API admin analytics
       const res = await fetch(`${API}/admin/analytics`, {
         headers: { Authorization: `Bearer ${publicAnonKey}` },
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.success && data.data) {
-          // Extraire les bookings depuis les analytics si disponibles
+        if (data.success && data.data?.consultationStats) {
+          setBookings(new Array(data.data.consultationStats.total || 0).fill(null));
         }
       }
     } catch (e) { console.error("Erreur bookings:", e); }
