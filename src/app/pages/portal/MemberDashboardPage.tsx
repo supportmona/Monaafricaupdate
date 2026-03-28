@@ -33,8 +33,6 @@ export default function MemberDashboardPage() {
   const [showStudentPlans, setShowStudentPlans] = useState(false);
   const [hasCompletedQuiz, setHasCompletedQuiz] = useState(false);
   const [showQuizPrompt, setShowQuizPrompt] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
 
   // Activer les rappels automatiques pour les consultations
   useConsultationReminders(consultations);
@@ -83,8 +81,6 @@ export default function MemberDashboardPage() {
 
   const loadConsultations = async () => {
     try {
-      setError(null);
-
       const token = localStorage.getItem("mona_member_token");
       if (!token) {
         setLoading(false);
@@ -108,20 +104,13 @@ export default function MemberDashboardPage() {
       if (response.ok) {
         const data = await response.json();
         setConsultations(data.data || []);
-        setRetryCount(0); // Reset retry count on success
       } else if (response.status === 401) {
         // Token invalide ou expiré - ne pas afficher d'erreur, juste arrêter
         console.log("Token JWT invalide ou expiré");
         setConsultations([]);
-      } else if (response.status >= 500) {
-        // Erreur serveur - afficher message d'erreur
-        setError("Service temporairement indisponible. Veuillez réessayer plus tard.");
-      } else {
-        setError("Impossible de charger vos consultations. Veuillez rafraîchir la page.");
       }
     } catch (error) {
       console.error("Erreur chargement consultations:", error);
-      setError("Problème de connexion. Vérifiez votre connexion internet et réessayez.");
       setConsultations([]);
     } finally {
       setLoading(false);
@@ -215,33 +204,6 @@ export default function MemberDashboardPage() {
     return (
       <div className="min-h-screen bg-[#F5F1ED] flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-[#A68B6F] animate-spin" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-[#F5F1ED] flex items-center justify-center">
-        <div className="max-w-md mx-auto text-center p-6">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <X className="w-8 h-8 text-red-600" />
-          </div>
-          <h2 className="text-xl font-serif text-[#1A1A1A] mb-2">
-            Erreur de chargement
-          </h2>
-          <p className="text-[#1A1A1A]/60 mb-6">
-            {error}
-          </p>
-          <button
-            onClick={() => {
-              setRetryCount(0);
-              loadConsultations();
-            }}
-            className="bg-[#A68B6F] text-white rounded-full px-6 py-3 font-medium hover:bg-[#8B7355] transition-colors"
-          >
-            Réessayer
-          </button>
-        </div>
       </div>
     );
   }

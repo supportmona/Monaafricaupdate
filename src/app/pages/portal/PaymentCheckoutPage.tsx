@@ -12,8 +12,6 @@ export default function PaymentCheckoutPage() {
   const [session, setSession] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedMethod, setSelectedMethod] = useState<"card" | "mobile-money">("card");
-  const [retryCount, setRetryCount] = useState(0);
-  const [paymentStatus, setPaymentStatus] = useState<"idle" | "processing" | "success" | "error">("idle");
 
   useEffect(() => {
     loadSession();
@@ -49,12 +47,10 @@ export default function PaymentCheckoutPage() {
     try {
       setProcessing(true);
       setError(null);
-      setPaymentStatus("processing");
 
       const token = localStorage.getItem("mona_member_token");
       if (!token) {
-        setError("Vous devez être connecté pour effectuer un paiement");
-        setPaymentStatus("error");
+        setError("Vous devez être connecté");
         return;
       }
 
@@ -77,37 +73,14 @@ export default function PaymentCheckoutPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setPaymentStatus("success");
         // Rediriger vers la page de confirmation
-        setTimeout(() => {
-          navigate("/payment/success");
-        }, 1000);
+        navigate("/payment/success");
       } else {
-        const errorMessage = data.error || "Erreur lors du paiement";
-        setError(errorMessage);
-        setPaymentStatus("error");
-
-        // Retry logic for certain errors
-        if (retryCount < 2 && (response.status >= 500 || errorMessage.includes("temporaire"))) {
-          setTimeout(() => {
-            setRetryCount(prev => prev + 1);
-            handlePayment();
-          }, 2000 * (retryCount + 1));
-        }
+        setError(data.error || "Erreur lors du paiement");
       }
     } catch (error) {
       console.error("Erreur paiement:", error);
-      const errorMessage = "Une erreur réseau est survenue. Vérifiez votre connexion et réessayez.";
-      setError(errorMessage);
-      setPaymentStatus("error");
-
-      // Retry for network errors
-      if (retryCount < 2) {
-        setTimeout(() => {
-          setRetryCount(prev => prev + 1);
-          handlePayment();
-        }, 2000 * (retryCount + 1));
-      }
+      setError("Une erreur est survenue lors du paiement");
     } finally {
       setProcessing(false);
     }
@@ -297,49 +270,20 @@ export default function PaymentCheckoutPage() {
 
             {error && (
               <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-2xl">
-                <p className="text-sm text-red-600 mb-2">{error}</p>
-                {retryCount > 0 && retryCount < 3 && (
-                  <p className="text-xs text-red-500">Tentative {retryCount}/3...</p>
-                )}
-                {retryCount >= 2 && (
-                  <button
-                    onClick={() => {
-                      setRetryCount(0);
-                      setError(null);
-                      handlePayment();
-                    }}
-                    className="text-xs text-red-600 hover:text-red-800 font-medium mt-1"
-                  >
-                    Réessayer manuellement
-                  </button>
-                )}
-              </div>
-            )}
-
-            {paymentStatus === "success" && (
-              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-2xl">
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-green-600" />
-                  <p className="text-sm text-green-600">Paiement validé ! Redirection en cours...</p>
-                </div>
+                <p className="text-sm text-red-600">{error}</p>
               </div>
             )}
 
             {/* Bouton paiement */}
             <button
               onClick={handlePayment}
-              disabled={processing || paymentStatus === "success"}
+              disabled={processing}
               className="w-full bg-[#1A1A1A] text-white rounded-full py-4 px-6 font-medium hover:bg-[#2A2A2A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {processing && paymentStatus === "processing" ? (
+              {processing ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
                   Traitement en cours...
-                </>
-              ) : paymentStatus === "success" ? (
-                <>
-                  <Check className="w-5 h-5" />
-                  Paiement réussi
                 </>
               ) : (
                 <>

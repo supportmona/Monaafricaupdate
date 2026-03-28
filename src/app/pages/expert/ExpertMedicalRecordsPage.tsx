@@ -25,36 +25,7 @@ import {
   Image as ImageIcon,
   Video,
   ChevronDown,
-  Brain,
-  Stethoscope
 } from "lucide-react";
-// --- Templates Mona (Santé mentale & Soins primaires) ---
-const MONA_TEMPLATES = [
-  {
-    category: "Santé mentale",
-    color: "bg-blue-50 border-blue-200",
-    icon: <Brain className="w-6 h-6 text-blue-600" />,
-    templates: [
-      { id: "prescription_mental_health", name: "Ordonnance Mona", desc: "Traitements psychiatriques" },
-      { id: "careplan_mental_health", name: "Plan de soins Mona", desc: "Suivi psychiatrique/psychologique" },
-      { id: "certificate_mental_health", name: "Certificat médical Mona", desc: "Arrêt de travail ou aptitude psychologique" },
-      { id: "report_mental_health", name: "Compte-rendu Mona", desc: "Consultation psychiatrique/psychologique" },
-      { id: "referral_mental_health", name: "Lettre de liaison Mona", desc: "Vers structure spécialisée" },
-    ]
-  },
-  {
-    category: "Soins primaires",
-    color: "bg-green-50 border-green-200",
-    icon: <Stethoscope className="w-6 h-6 text-green-600" />,
-    templates: [
-      { id: "prescription_primary_care", name: "Ordonnance Mona", desc: "Soins médicaux généraux" },
-      { id: "careplan_primary_care", name: "Plan de soins Mona", desc: "Pathologie médicale générale" },
-      { id: "certificate_primary_care", name: "Certificat médical Mona", desc: "Justificatif ou arrêt de travail" },
-      { id: "report_primary_care", name: "Compte-rendu Mona", desc: "Consultation médicale générale" },
-      { id: "referral_primary_care", name: "Lettre de liaison Mona", desc: "Vers spécialiste" },
-    ]
-  }
-];
 
 // Types
 interface MedicalRecord {
@@ -86,9 +57,6 @@ export default function ExpertMedicalRecordsPage() {
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [tab, setTab] = useState<'templates' | 'documents'>("templates");
-  const [templateCategory, setTemplateCategory] = useState<'Santé mentale' | 'Soins primaires'>("Santé mentale");
-  const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
 
   // Données mockées
   const [records] = useState<MedicalRecord[]>([
@@ -262,89 +230,8 @@ export default function ExpertMedicalRecordsPage() {
   };
 
   return (
-    <ExpertLayout title="Mes documents">
-      <div className="p-6 space-y-10">
-        {/* Onglets navigation */}
-        <div className="flex gap-2 mb-8">
-          <button
-            className={`px-6 py-3 rounded-full font-semibold transition-colors ${tab === 'templates' ? 'bg-[#A68B6F] text-white' : 'bg-[#F5F1ED] text-[#1A1A1A]'}`}
-            onClick={() => setTab('templates')}
-          >
-            Templates Mona
-          </button>
-          <button
-            className={`px-6 py-3 rounded-full font-semibold transition-colors ${tab === 'documents' ? 'bg-[#A68B6F] text-white' : 'bg-[#F5F1ED] text-[#1A1A1A]'}`}
-            onClick={() => setTab('documents')}
-          >
-            Documents uploadés
-          </button>
-        </div>
-
-        {/* Section Templates Mona avec sous-onglets */}
-        {tab === 'templates' && (
-          <div>
-            <div className="flex gap-2 mb-6">
-              {MONA_TEMPLATES.map((cat) => (
-                <button
-                  key={cat.category}
-                  className={`px-4 py-2 rounded-full font-medium transition-colors ${templateCategory === cat.category ? 'bg-[#A68B6F] text-white' : 'bg-[#F5F1ED] text-[#1A1A1A]'}`}
-                  onClick={() => setTemplateCategory(cat.category as any)}
-                >
-                  {cat.category}
-                </button>
-              ))}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {MONA_TEMPLATES.find((cat) => cat.category === templateCategory)?.templates.map((tpl) => (
-                <div key={tpl.id} className="rounded-2xl border bg-white p-6 shadow-sm flex items-center justify-between">
-                  <div>
-                    <span className="font-medium text-[#1A1A1A]">{tpl.name}</span>
-                    <span className="ml-2 text-xs text-[#1A1A1A]/60">{tpl.desc}</span>
-                  </div>
-                  <button
-                    className="px-4 py-2 rounded-full bg-[#A68B6F] text-white text-xs font-semibold shadow hover:bg-[#8A7159] transition-colors"
-                    onClick={() => setSelectedTemplate(tpl)}
-                  >
-                    Aperçu
-                  </button>
-                </div>
-              ))}
-            </div>
-            {/* Info card */}
-            <div className="bg-[#F5F1ED] rounded-2xl p-6 border border-[#D4C5B9] mt-10">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-[#A68B6F] rounded-xl flex items-center justify-center flex-shrink-0">
-                  <FileText className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium text-[#1A1A1A] mb-2">
-                    À propos des templates Mona
-                  </h3>
-                  <p className="text-sm text-[#1A1A1A]/70 leading-relaxed mb-4">
-                    Ces 10 modèles couvrent les besoins cliniques fondamentaux en santé mentale et soins primaires. Chaque document est conçu selon les standards médicaux africains et internationaux.
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                    <div className="flex items-center gap-2 text-[#1A1A1A]/60">
-                      <Brain className="w-4 h-4 text-[#A68B6F]" />
-                      <span>5 modèles santé mentale</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-[#1A1A1A]/60">
-                      <Stethoscope className="w-4 h-4 text-[#B85C50]" />
-                      <span>5 modèles soins primaires</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Section Documents uploadés (MedicalRecords) */}
-        {tab === 'documents' && (
-          <div className="space-y-6">
-            {/* ...existing code... */}
-        <div className="space-y-6">
-          {/* ...existing code... */}
+    <ExpertLayout title="Dossiers médicaux">
+      <div className="p-6 space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <motion.div

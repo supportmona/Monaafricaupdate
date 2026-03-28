@@ -39,8 +39,6 @@ export default function ConsultationRoomPage() {
   const [consultationData, setConsultationData] = useState<any>(null);
   const [roomUrl, setRoomUrl] = useState<string>("");
   const [error, setError] = useState<string>("");
-  const [retryCount, setRetryCount] = useState(0);
-  const [connectionStatus, setConnectionStatus] = useState<"connecting" | "connected" | "disconnected" | "error">("connecting");
 
   const expertInfo = {
     name: "Dr. Kouassi Mensah",
@@ -62,7 +60,6 @@ export default function ConsultationRoomPage() {
       try {
         setIsLoading(true);
         setError("");
-        setConnectionStatus("connecting");
 
         const response = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-6378cc81/consultations/join-room`,
@@ -90,22 +87,10 @@ export default function ConsultationRoomPage() {
         if (data.success && data.roomUrl) {
           setRoomUrl(data.roomUrl);
           setConsultationStarted(true);
-          setConnectionStatus("connected");
-          setRetryCount(0); // Reset retry count on success
         }
       } catch (err: any) {
         console.error("Erreur join room:", err);
-        const errorMessage = err.message || "Impossible de rejoindre la consultation";
-        setError(errorMessage);
-        setConnectionStatus("error");
-
-        // Retry logic for network errors
-        if (retryCount < 3 && (err.name === 'NetworkError' || err.message.includes('fetch'))) {
-          setTimeout(() => {
-            setRetryCount(prev => prev + 1);
-            joinConsultationRoom();
-          }, 2000 * (retryCount + 1)); // Exponential backoff
-        }
+        setError(err.message || "Impossible de rejoindre la consultation");
       } finally {
         setIsLoading(false);
       }

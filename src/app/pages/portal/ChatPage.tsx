@@ -27,8 +27,6 @@ export default function ChatPage() {
   const [userType, setUserType] = useState<"member" | "expert" | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollingInterval = useRef<any>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [connectionStatus, setConnectionStatus] = useState<"online" | "offline" | "connecting">("connecting");
 
   useEffect(() => {
     // Determine user type
@@ -86,18 +84,11 @@ export default function ChatPage() {
 
   const loadConversations = async () => {
     try {
-      setError(null);
-      setConnectionStatus("connecting");
-
       const memberToken = localStorage.getItem("mona_member_token");
       const expertToken = localStorage.getItem("mona_expert_token");
       const token = memberToken || expertToken;
 
-      if (!token) {
-        setConversations([]);
-        setConnectionStatus("offline");
-        return;
-      }
+      if (!token) return;
 
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-6378cc81/chat/conversations`,
@@ -113,15 +104,9 @@ export default function ChatPage() {
       if (response.ok) {
         const data = await response.json();
         setConversations(data.data || []);
-        setConnectionStatus("online");
-      } else {
-        setError("Impossible de charger les conversations. Veuillez réessayer.");
-        setConnectionStatus("offline");
       }
     } catch (error) {
       console.error("Erreur chargement conversations:", error);
-      setError("Problème de connexion. Vérifiez votre connexion internet.");
-      setConnectionStatus("offline");
     } finally {
       setLoading(false);
     }
@@ -269,30 +254,10 @@ export default function ChatPage() {
             </Link>
             <div className="flex-1">
               <h1 className="text-2xl font-serif text-[#1A1A1A]">Messages</h1>
-              {connectionStatus === "offline" && (
-                <p className="text-sm text-red-600">Hors ligne</p>
-              )}
-              {connectionStatus === "connecting" && (
-                <p className="text-sm text-yellow-600">Connexion...</p>
-              )}
             </div>
           </div>
         </div>
       </header>
-
-      {error && (
-        <div className="bg-red-50 border-b border-red-200 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-red-800">{error}</p>
-            <button
-              onClick={loadConversations}
-              className="text-sm text-red-600 hover:text-red-800 font-medium"
-            >
-              Réessayer
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="flex-1 flex overflow-hidden">
         {/* Conversations List */}

@@ -11,41 +11,26 @@ export default function ExpertLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loadingLogin, setLoadingLogin] = useState(false);
-  const [loadingDemo, setLoadingDemo] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoadingLogin(true);
+    setLoading(true);
 
     try {
       await login(email, password);
-      // Vérifier que le token est bien stocké
-      const token = localStorage.getItem("expert_access_token");
-      if (!token) {
-        setError("Connexion échouée : aucun token reçu. Veuillez réessayer ou contacter le support.");
-        console.error("[DEBUG] Aucun token expert_access_token dans localStorage après login.");
-        setLoadingLogin(false);
-        return;
-      }
-      // Debug : log le contenu du localStorage
-      console.log("[DEBUG] localStorage après login :", {
-        expert_access_token: localStorage.getItem("expert_access_token"),
-        expert_user: localStorage.getItem("expert_user"),
-        expert_profile: localStorage.getItem("expert_profile"),
-      });
       navigate("/expert/dashboard");
     } catch (err: any) {
       setError(err.message || "Email ou mot de passe incorrect");
     } finally {
-      setLoadingLogin(false);
+      setLoading(false);
     }
   };
 
   // Remplir les champs avec le compte démo
   const fillDemoCredentials = async () => {
-    setLoadingDemo(true);
+    setLoading(true);
     setError("");
 
     try {
@@ -73,7 +58,7 @@ export default function ExpertLoginPage() {
     } catch (err: any) {
       setError("Erreur technique lors de l'initialisation");
     } finally {
-      setLoadingDemo(false);
+      setLoading(false);
     }
   };
 
@@ -156,10 +141,10 @@ export default function ExpertLoginPage() {
 
             <button
               type="submit"
-              disabled={loadingLogin || loadingDemo}
+              disabled={loading}
               className="w-full bg-[#1A1A1A] text-white rounded-full py-3 font-medium hover:bg-[#2A2A2A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {loadingLogin ? (
+              {loading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
                   Connexion en cours...
@@ -177,10 +162,10 @@ export default function ExpertLoginPage() {
           <div className="mt-6">
             <button
               onClick={fillDemoCredentials}
-              disabled={loadingDemo || loadingLogin}
+              disabled={loading}
               className="w-full bg-[#A68B6F] text-white rounded-full py-3 font-medium hover:bg-[#8A7159] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {loadingDemo ? (
+              {loading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
                   Création en cours...

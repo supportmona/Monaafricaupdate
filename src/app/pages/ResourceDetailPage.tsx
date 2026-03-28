@@ -1,4 +1,9 @@
-import { generateGuidePDF } from "@/app/utils/pdfGenerator";
+import { motion } from "motion/react";
+import { ArrowLeft, Clock, Download, Lock, Share2, BookmarkPlus, Play } from "lucide-react";
+import { Link, useParams, useNavigate } from "react-router";
+import NavigationBar from "@/app/components/NavigationBar";
+import FooterSection from "@/app/components/FooterSection";
+import { useState } from "react";
 
 export default function ResourceDetailPage() {
   const { id } = useParams();
@@ -409,23 +414,20 @@ export default function ResourceDetailPage() {
     
     setIsDownloading(true);
     
-    // Générer un PDF réel avec jsPDF
-    try {
-      generateGuidePDF(resource.id, resource.title);
-    } catch (error) {
-      console.error('Erreur lors de la génération du PDF:', error);
-      // Fallback vers le téléchargement texte si PDF échoue
+    // Simuler un téléchargement
+    setTimeout(() => {
+      // Créer un PDF fictif
       const element = document.createElement('a');
       const content = `M.O.N.A - ${resource.title}\n\n${resource.description}\n\nCe document a été téléchargé depuis monafrica.net`;
       const file = new Blob([content], { type: 'text/plain' });
       element.href = URL.createObjectURL(file);
-      element.download = `${resource.id}.txt`;
+      element.download = `${resource.id}.pdf`;
       document.body.appendChild(element);
       element.click();
       document.body.removeChild(element);
-    }
-    
-    setIsDownloading(false);
+      
+      setIsDownloading(false);
+    }, 1500);
   };
 
   const isAccessible = resource.isFree;
