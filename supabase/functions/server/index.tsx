@@ -1,5 +1,5 @@
 import * as kv from "./kv_store.tsx";
-import { sendApprovalEmail, sendRejectionEmail, sendAdminToExpertEmail, sendExpertInvitationEmail } from "./emailService.tsx";
+import { sendApprovalEmail, sendRejectionEmail, createExpertAccount, ... } from "./emailService.tsx";
 import { sendContactEmail, sendSupportEmail } from "./emailService.tsx";
 import { sendConsultationNotificationEmail, sendMessageNotificationEmail } from "./notificationEmailService.tsx";
 import * as expertAuth from "./expert_auth.tsx";
@@ -519,20 +519,29 @@ app.put("/make-server-6378cc81/expert/application/:id", async (c) => {
     if (!existingApp) return c.json({ error: "Candidature introuvable" }, 404);
     const updatedApp = { ...existingApp, ...body, updatedAt: new Date().toISOString() };
     await kv.set(`application:${applicationId}`, updatedApp);
-    if (body.status === "approved") {
-      const pendingIds = (await kv.get("applications:pending") || []).filter((id: string) => id !== applicationId);
-      await kv.set("applications:pending", pendingIds);
-      const approvedIds = await kv.get("applications:approved") || [];
-      approvedIds.push(applicationId);
-      await kv.set("applications:approved", approvedIds);
-      await sendApprovalEmail(updatedApp.email, updatedApp.firstName, updatedApp.lastName);
-    } else if (body.status === "rejected") {
-      await sendRejectionEmail(updatedApp.email, updatedApp.firstName, updatedApp.lastName);
-    }
-    return c.json({ success: true, message: "Candidature mise à jour avec succès", data: updatedApp });
-  } catch (error) {
-    return c.json({ error: `Erreur serveur lors de la mise à jour: ${error.message}` }, 500);
-  }
+   if (body.status === "approved") {
+  const pendingIds = (await kv.get("applications:pending") || []).filter((id: string) => id !== applicationId);
+  await kv.set("applications:pending", pendingIds);
+  const approvedIds = await kv.get("applications:approved") || [];
+  approvedIds.push(applicationId);
+  await kv.set("applications:approved", approvedIds);
+
+  const credentials = await createExpertAccount(
+    updatedApp.firstName,
+    updatedApp.lastName,
+    updatedApp.profession || updatedApp.specialty || "",
+  );
+
+  await sendApprovalEmail(
+    updatedApp.email,
+    updatedApp.firstName,
+    updatedApp.lastName,
+    credentials || undefined
+  );
+
+} else if (body.status === "rejected") {
+  await sendRejectionEmail(updatedApp.email, updatedApp.firstName, updatedApp.lastName);
+}
 });
 
 // ==================== MESSAGERIE INTERNE ROUTES ====================
