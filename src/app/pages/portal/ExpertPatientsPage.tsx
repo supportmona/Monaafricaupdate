@@ -1,36 +1,36 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { motion } from "motion/react";
-import {
-  Users,
-  Search,
-  ArrowLeft,
-  Calendar,
-  FileText,
-  ChevronRight,
-} from "lucide-react";
-import { projectId, publicAnonKey } from "/utils/supabase/info";
+import { Users, Search, Calendar, FileText, ChevronRight } from "lucide-react";
+import { projectId } from "/utils/supabase/info";
+import { useExpertAuth } from "@/app/contexts/ExpertAuthContext";
+import ExpertLayout from "@/app/components/ExpertLayout";
 
 export default function ExpertPatientsPage() {
+  const { accessToken } = useExpertAuth();
   const [patients, setPatients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     loadPatients();
-  }, []);
+  }, [accessToken]);
 
   const loadPatients = async () => {
-    try {
-      const token = localStorage.getItem("mona_expert_token");
-      if (!token) return;
+    // ✅ Token du contexte, pas l'ancien mona_expert_token
+    const token = accessToken || localStorage.getItem("expert_access_token");
+    if (!token) {
+      setLoading(false);
+      return;
+    }
 
+    try {
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-6378cc81/expert/patients/list`,
         {
           headers: {
-            Authorization: `Bearer ${publicAnonKey}`,
-            "X-Expert-Token": token,
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
         }
       );
@@ -47,49 +47,35 @@ export default function ExpertPatientsPage() {
   };
 
   const filteredPatients = patients.filter((patient) =>
-    patient.name.toLowerCase().includes(searchQuery.toLowerCase())
+    patient.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F5F1ED] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#A68B6F] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-[#1A1A1A]/60">Chargement...</p>
+      <ExpertLayout title="Mes patients">
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-[#A68B6F] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-[#1A1A1A]/60">Chargement...</p>
+          </div>
         </div>
-      </div>
+      </ExpertLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F1ED]">
-      {/* Header */}
-      <header className="bg-white border-b border-[#D4C5B9]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link
-                to="/expert/dashboard"
-                className="p-2 hover:bg-[#F5F1ED] rounded-full transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5 text-[#1A1A1A]/60" />
-              </Link>
-              <div>
-                <h1 className="text-2xl font-serif text-[#1A1A1A]">
-                  Mes patients
-                </h1>
-                <p className="text-sm text-[#1A1A1A]/60 mt-1">
-                  {patients.length} patient{patients.length > 1 ? "s" : ""} au total
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
+    <ExpertLayout title="Mes patients">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search */}
-        <div className="bg-white rounded-2xl p-6 border border-[#D4C5B9] mb-6">
+
+        {/* Titre + compteur */}
+        <div className="mb-6">
+          <p className="text-sm text-[#1A1A1A]/60">
+            {patients.length} patient{patients.length > 1 ? "s" : ""} au total
+          </p>
+        </div>
+
+        {/* Recherche */}
+        <div className="bg-white rounded-2xl p-4 border border-[#D4C5B9] mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1A1A1A]/40" />
             <input
@@ -102,7 +88,7 @@ export default function ExpertPatientsPage() {
           </div>
         </div>
 
-        {/* Patients List */}
+        {/* Liste patients */}
         {filteredPatients.length === 0 ? (
           <div className="bg-white rounded-2xl p-12 border border-[#D4C5B9] text-center">
             <Users className="w-16 h-16 text-[#1A1A1A]/20 mx-auto mb-4" />
@@ -130,7 +116,7 @@ export default function ExpertPatientsPage() {
                 >
                   <div className="flex items-center gap-4 flex-1">
                     <div className="w-14 h-14 bg-gradient-to-br from-[#A68B6F] to-[#C1694F] rounded-full flex items-center justify-center text-white text-lg font-semibold flex-shrink-0">
-                      {patient.name.charAt(0)}
+                      {patient.name?.charAt(0) || "P"}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium text-[#1A1A1A] mb-1 truncate">
@@ -158,10 +144,8 @@ export default function ExpertPatientsPage() {
                       </div>
                       {patient.lastConsultation && (
                         <p className="text-xs text-[#1A1A1A]/60">
-                          Dernière:{" "}
-                          {new Date(patient.lastConsultation).toLocaleDateString(
-                            "fr-FR"
-                          )}
+                          Dernière :{" "}
+                          {new Date(patient.lastConsultation).toLocaleDateString("fr-FR")}
                         </p>
                       )}
                     </div>
@@ -173,6 +157,6 @@ export default function ExpertPatientsPage() {
           </div>
         )}
       </div>
-    </div>
+    </ExpertLayout>
   );
 }
