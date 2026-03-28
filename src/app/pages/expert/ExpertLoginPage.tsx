@@ -8,15 +8,19 @@ import { useExpertAuth } from "@/app/contexts/ExpertAuthContext";
 export default function ExpertLoginPage() {
   const navigate = useNavigate();
   const { login } = useExpertAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+
+  // ✅ Un état de loading PAR bouton — ils ne se mélangent plus
+  const [loadingLogin, setLoadingLogin] = useState(false);
+  const [loadingDemo, setLoadingDemo] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
+    setLoadingLogin(true);
 
     try {
       await login(email, password);
@@ -24,23 +28,21 @@ export default function ExpertLoginPage() {
     } catch (err: any) {
       setError(err.message || "Email ou mot de passe incorrect");
     } finally {
-      setLoading(false);
+      setLoadingLogin(false);
     }
   };
 
-  // Remplir les champs avec le compte démo
   const fillDemoCredentials = async () => {
-    setLoading(true);
+    setLoadingDemo(true);
     setError("");
 
     try {
-      // Initialiser le compte démo côté serveur
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-6378cc81/expert/init-demo`,
         {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${publicAnonKey}`,
+            Authorization: `Bearer ${publicAnonKey}`,
             "Content-Type": "application/json",
           },
         }
@@ -49,18 +51,27 @@ export default function ExpertLoginPage() {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        // Remplir les champs avec les credentials
-        setEmail(result.credentials.email);
-        setPassword(result.credentials.password);
+        // Remplir les champs puis connecter directement
+        const demoEmail = result.credentials.email;
+        const demoPassword = result.credentials.password;
+        setEmail(demoEmail);
+        setPassword(demoPassword);
+
+        // Connexion automatique avec le compte démo
+        await login(demoEmail, demoPassword);
+        navigate("/expert/dashboard");
       } else {
         setError(result.error || "Erreur initialisation compte démo");
       }
     } catch (err: any) {
       setError("Erreur technique lors de l'initialisation");
     } finally {
-      setLoading(false);
+      setLoadingDemo(false);
     }
   };
+
+  // Désactiver les deux boutons si l'un ou l'autre tourne
+  const anyLoading = loadingLogin || loadingDemo;
 
   return (
     <div className="min-h-screen bg-[#F5F1ED] flex items-center justify-center p-4">
@@ -105,6 +116,7 @@ export default function ExpertLoginPage() {
                   className="w-full pl-12 pr-4 py-3 border border-[#D4C5B9] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#A68B6F] focus:border-transparent"
                   placeholder="expert@monafrica.net"
                   required
+                  disabled={anyLoading}
                 />
               </div>
             </div>
@@ -122,6 +134,7 @@ export default function ExpertLoginPage() {
                   className="w-full pl-12 pr-4 py-3 border border-[#D4C5B9] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#A68B6F] focus:border-transparent"
                   placeholder="••••••••"
                   required
+                  disabled={anyLoading}
                 />
               </div>
             </div>
@@ -139,12 +152,13 @@ export default function ExpertLoginPage() {
               </Link>
             </div>
 
+            {/* Bouton connexion normale */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={anyLoading}
               className="w-full bg-[#1A1A1A] text-white rounded-full py-3 font-medium hover:bg-[#2A2A2A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {loading ? (
+              {loadingLogin ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
                   Connexion en cours...
@@ -158,17 +172,17 @@ export default function ExpertLoginPage() {
             </button>
           </form>
 
-          {/* Bouton Compte Démo */}
+          {/* Bouton compte démo — loading indépendant */}
           <div className="mt-6">
             <button
               onClick={fillDemoCredentials}
-              disabled={loading}
+              disabled={anyLoading}
               className="w-full bg-[#A68B6F] text-white rounded-full py-3 font-medium hover:bg-[#8A7159] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {loading ? (
+              {loadingDemo ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Création en cours...
+                  Connexion démo en cours...
                 </>
               ) : (
                 <>
