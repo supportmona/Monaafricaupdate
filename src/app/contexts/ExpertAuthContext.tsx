@@ -35,6 +35,7 @@ interface ExpertAuthContextType {
   user: ExpertUser | null;
   profile: ExpertProfile | null;
   accessToken: string | null;
+  isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
@@ -42,9 +43,7 @@ interface ExpertAuthContextType {
   refreshSession: () => Promise<void>;
 }
 
-const ExpertAuthContext = createContext<ExpertAuthContextType | undefined>(
-  undefined
-);
+const ExpertAuthContext = createContext<ExpertAuthContextType | undefined>(undefined);
 
 export function ExpertAuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<ExpertUser | null>(null);
@@ -55,8 +54,20 @@ export function ExpertAuthProvider({ children }: { children: React.ReactNode }) 
 
   const serverUrl = `https://${projectId}.supabase.co/functions/v1/make-server-6378cc81`;
 
-  // ✅ FIX : Au chargement, on restaure la session depuis localStorage
-  // On ne supprime PLUS les tokens existants — c'était ça le bug
+  // isAuthenticated dérivé de user — jamais de désynchronisation
+  const isAuthenticated = !!user;
+
+  const clearSession = () => {
+    setUser(null);
+    setProfile(null);
+    setAccessToken(null);
+    localStorage.removeItem("expert_access_token");
+    localStorage.removeItem("expert_user");
+    localStorage.removeItem("expert_profile");
+  };
+
+  // Au chargement : restaure la session depuis localStorage sans jamais
+  // supprimer le token avant de l'avoir vérifié
   useEffect(() => {
     const restoreSession = async () => {
       try {
@@ -64,56 +75,50 @@ export function ExpertAuthProvider({ children }: { children: React.ReactNode }) 
         const storedUser = localStorage.getItem("expert_user");
         const storedProfile = localStorage.getItem("expert_profile");
 
-        // Pas de token stocké → pas de session, on arrête là
         if (!storedToken) {
           setLoading(false);
           return;
         }
 
-        // Restauration immédiate depuis le cache pour éviter le flash de redirection
+        // Restauration immédiate depuis cache → évite le flash de redirection
         if (storedUser && storedProfile) {
           try {
             setUser(JSON.parse(storedUser));
             setProfile(JSON.parse(storedProfile));
             setAccessToken(storedToken);
           } catch {
-            // JSON corrompu → on nettoie et on vérifie via API
+            // JSON corrompu → on continue
           }
         }
 
-        // Vérification de la validité du token en arrière-plan
-        const response = await fetch(`${serverUrl}/expert/session`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${storedToken}`,
-            "Content-Type": "application/json",
-          },
-        });
+        // Vérification en arrière-plan
+        try {
+          const response = await fetch(`${serverUrl}/expert/session`, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${storedToken}`,
+              "Content-Type": "application/json",
+            },
+          });
 
-        if (!response.ok) {
-          // Token expiré ou invalide → nettoyage silencieux
-          localStorage.removeItem("expert_access_token");
-          localStorage.removeItem("expert_user");
-          localStorage.removeItem("expert_profile");
-          setAccessToken(null);
-          setUser(null);
-          setProfile(null);
-        } else {
-          const data = await response.json();
-          if (data.success && data.data) {
-            // Mise à jour avec les données fraîches du serveur
-            setUser(data.data.user);
-            setProfile(data.data.profile);
-            setAccessToken(storedToken);
-            // Rafraîchir le cache
-            localStorage.setItem("expert_user", JSON.stringify(data.data.user));
-            localStorage.setItem("expert_profile", JSON.stringify(data.data.profile));
+          if (response.status === 401) {
+            // Token expiré → déconnexion propre
+            clearSession();
+          } else if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.data) {
+              setUser(data.data.user);
+              setProfile(data.data.profile);
+              setAccessToken(storedToken);
+              localStorage.setItem("expert_user", JSON.stringify(data.data.user));
+              localStorage.setItem("expert_profile", JSON.stringify(data.data.profile));
+            }
           }
+          // 500 ou autre → on garde la session en cache
+        } catch {
+          // Erreur réseau → session conservée, pas de déconnexion forcée
+          console.warn("⚠️ Vérification session impossible (réseau) — session conservée");
         }
-      } catch {
-        // Erreur réseau → on garde la session en cache, on ne déconnecte pas
-        // L'expert pourra continuer en mode dégradé
-        console.warn("⚠️ Impossible de vérifier la session expert (réseau?)");
       } finally {
         setLoading(false);
       }
@@ -142,7 +147,7 @@ export function ExpertAuthProvider({ children }: { children: React.ReactNode }) 
       const data = await response.json();
 
       if (!response.ok || data.error) {
-        throw new Error(data.error || "Erreur lors de la connexion");
+        throw new Error(data.error || "Identifiants incorrects");
       }
 
       if (data.success && data.data) {
@@ -157,8 +162,7 @@ export function ExpertAuthProvider({ children }: { children: React.ReactNode }) 
         localStorage.setItem("expert_profile", JSON.stringify(profileData));
       }
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Erreur lors de la connexion";
+      const errorMessage = err instanceof Error ? err.message : "Erreur de connexion";
       setError(errorMessage);
       throw err;
     } finally {
@@ -167,9 +171,6 @@ export function ExpertAuthProvider({ children }: { children: React.ReactNode }) 
   };
 
   const logout = async () => {
-    setLoading(true);
-    setError(null);
-
     try {
       if (accessToken) {
         await fetch(`${serverUrl}/expert/logout`, {
@@ -180,15 +181,10 @@ export function ExpertAuthProvider({ children }: { children: React.ReactNode }) 
           },
         });
       }
-    } catch (err) {
-      console.error("Erreur lors de la déconnexion:", err);
+    } catch {
+      console.error("Erreur lors de la déconnexion");
     } finally {
-      setUser(null);
-      setProfile(null);
-      setAccessToken(null);
-      localStorage.removeItem("expert_access_token");
-      localStorage.removeItem("expert_user");
-      localStorage.removeItem("expert_profile");
+      clearSession();
       setLoading(false);
     }
   };
@@ -207,12 +203,7 @@ export function ExpertAuthProvider({ children }: { children: React.ReactNode }) 
       });
 
       if (!response.ok) {
-        localStorage.removeItem("expert_access_token");
-        localStorage.removeItem("expert_user");
-        localStorage.removeItem("expert_profile");
-        setAccessToken(null);
-        setUser(null);
-        setProfile(null);
+        clearSession();
         return;
       }
 
@@ -233,6 +224,7 @@ export function ExpertAuthProvider({ children }: { children: React.ReactNode }) 
         user,
         profile,
         accessToken,
+        isAuthenticated,
         loading,
         error,
         login,
@@ -248,9 +240,7 @@ export function ExpertAuthProvider({ children }: { children: React.ReactNode }) 
 export function useExpertAuth() {
   const context = useContext(ExpertAuthContext);
   if (context === undefined) {
-    throw new Error(
-      "useExpertAuth doit être utilisé à l'intérieur d'un ExpertAuthProvider"
-    );
+    throw new Error("useExpertAuth doit être utilisé à l'intérieur d'un ExpertAuthProvider");
   }
   return context;
 }
