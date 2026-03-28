@@ -55,80 +55,81 @@ export function ExpertAuthProvider({ children }: { children: React.ReactNode }) 
 
   const serverUrl = `https://${projectId}.supabase.co/functions/v1/make-server-6378cc81`;
 
-  // Nettoyer l'ancien système d'authentification au chargement
+  // ✅ FIX : Au chargement, on restaure la session depuis localStorage
+  // On ne supprime PLUS les tokens existants — c'était ça le bug
   useEffect(() => {
-    const cleanupOldAuth = () => {
-      // Supprimer les anciennes clés obsolètes et tous les tokens
-      const oldKeys = ["mona_expert_user", "expert_token", "expert_access_token", "expert_user", "expert_profile"];
-      oldKeys.forEach(key => {
-        localStorage.removeItem(key);
-      });
+    const restoreSession = async () => {
+      try {
+        const storedToken = localStorage.getItem("expert_access_token");
+        const storedUser = localStorage.getItem("expert_user");
+        const storedProfile = localStorage.getItem("expert_profile");
+
+        // Pas de token stocké → pas de session, on arrête là
+        if (!storedToken) {
+          setLoading(false);
+          return;
+        }
+
+        // Restauration immédiate depuis le cache pour éviter le flash de redirection
+        if (storedUser && storedProfile) {
+          try {
+            setUser(JSON.parse(storedUser));
+            setProfile(JSON.parse(storedProfile));
+            setAccessToken(storedToken);
+          } catch {
+            // JSON corrompu → on nettoie et on vérifie via API
+          }
+        }
+
+        // Vérification de la validité du token en arrière-plan
+        const response = await fetch(`${serverUrl}/expert/session`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${storedToken}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          // Token expiré ou invalide → nettoyage silencieux
+          localStorage.removeItem("expert_access_token");
+          localStorage.removeItem("expert_user");
+          localStorage.removeItem("expert_profile");
+          setAccessToken(null);
+          setUser(null);
+          setProfile(null);
+        } else {
+          const data = await response.json();
+          if (data.success && data.data) {
+            // Mise à jour avec les données fraîches du serveur
+            setUser(data.data.user);
+            setProfile(data.data.profile);
+            setAccessToken(storedToken);
+            // Rafraîchir le cache
+            localStorage.setItem("expert_user", JSON.stringify(data.data.user));
+            localStorage.setItem("expert_profile", JSON.stringify(data.data.profile));
+          }
+        }
+      } catch {
+        // Erreur réseau → on garde la session en cache, on ne déconnecte pas
+        // L'expert pourra continuer en mode dégradé
+        console.warn("⚠️ Impossible de vérifier la session expert (réseau?)");
+      } finally {
+        setLoading(false);
+      }
     };
 
-    cleanupOldAuth();
-    setLoading(false); // Juste marquer comme chargé, pas de vérification auto
+    restoreSession();
   }, []);
-
-  // Fonction pour vérifier la session (utilisée uniquement par refreshSession)
-  const checkSession = async () => {
-    try {
-      const storedToken = localStorage.getItem("expert_access_token");
-
-      if (!storedToken) {
-        setLoading(false);
-        return;
-      }
-
-      const response = await fetch(`${serverUrl}/expert/session`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${storedToken}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        // Session expirée ou invalide - nettoyage silencieux sans erreur
-        localStorage.removeItem("expert_access_token");
-        localStorage.removeItem("expert_user");
-        localStorage.removeItem("expert_profile");
-        setAccessToken(null);
-        setUser(null);
-        setProfile(null);
-        setLoading(false);
-        return;
-      }
-
-      const data = await response.json();
-
-      if (data.success && data.data) {
-        setUser(data.data.user);
-        setProfile(data.data.profile);
-        setAccessToken(storedToken);
-      }
-    } catch (err) {
-      // Erreur silencieuse
-      localStorage.removeItem("expert_access_token");
-      localStorage.removeItem("expert_user");
-      localStorage.removeItem("expert_profile");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const login = async (email: string, password: string) => {
     setLoading(true);
     setError(null);
 
     try {
-      // Nettoyer les espaces invisibles
       const cleanEmail = email.trim();
       const cleanPassword = password.trim();
-      
-      console.log(`🔐 [Frontend] Tentative de connexion pour: ${cleanEmail}`);
-      console.log(`📧 [Frontend] Email envoyé (longueur: ${cleanEmail.length}):`, JSON.stringify(cleanEmail));
-      console.log(`🔑 [Frontend] Mot de passe envoyé (longueur: ${cleanPassword.length}):`, JSON.stringify(cleanPassword));
-      
+
       const response = await fetch(`${serverUrl}/expert/login`, {
         method: "POST",
         headers: {
@@ -141,41 +142,23 @@ export function ExpertAuthProvider({ children }: { children: React.ReactNode }) 
       const data = await response.json();
 
       if (!response.ok || data.error) {
-        console.error(`❌ [Frontend] Erreur de connexion:`, data.error);
-        
         throw new Error(data.error || "Erreur lors de la connexion");
       }
 
       if (data.success && data.data) {
         const { session, user: userData, profile: profileData } = data.data;
 
-        console.log(`✅ [Frontend] Connexion réussie`);
-        console.log(`👤 [Frontend] Utilisateur ID: ${userData.id}`);
-        console.log(`📧 [Frontend] Email: ${userData.email}`);
-        console.log(`🏷️ [Frontend] Rôle: ${userData.user_metadata?.role}`);
-        
-        if (profileData) {
-          console.log(`👨‍⚕️ [Frontend] Profil: ${profileData.firstName} ${profileData.lastName}`);
-          console.log(`🎯 [Frontend] Spécialité: ${profileData.specialty}`);
-        } else {
-          console.warn(`⚠️ [Frontend] Aucun profil trouvé pour cet utilisateur`);
-        }
-
         setUser(userData);
         setProfile(profileData);
         setAccessToken(session.access_token);
 
-        // Stocker dans le localStorage
         localStorage.setItem("expert_access_token", session.access_token);
         localStorage.setItem("expert_user", JSON.stringify(userData));
         localStorage.setItem("expert_profile", JSON.stringify(profileData));
-        
-        console.log(`💾 [Frontend] Session stockée dans localStorage`);
       }
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Erreur lors de la connexion";
-      console.error(`❌ [Frontend] Exception:`, err);
       setError(errorMessage);
       throw err;
     } finally {
@@ -197,26 +180,51 @@ export function ExpertAuthProvider({ children }: { children: React.ReactNode }) 
           },
         });
       }
-
-      // Nettoyer l'état local
+    } catch (err) {
+      console.error("Erreur lors de la déconnexion:", err);
+    } finally {
       setUser(null);
       setProfile(null);
       setAccessToken(null);
-
-      // Nettoyer le localStorage
       localStorage.removeItem("expert_access_token");
       localStorage.removeItem("expert_user");
       localStorage.removeItem("expert_profile");
-    } catch (err) {
-      console.error("Erreur lors de la déconnexion:", err);
-      setError("Erreur lors de la déconnexion");
-    } finally {
       setLoading(false);
     }
   };
 
   const refreshSession = async () => {
-    await checkSession();
+    const storedToken = localStorage.getItem("expert_access_token");
+    if (!storedToken) return;
+
+    try {
+      const response = await fetch(`${serverUrl}/expert/session`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${storedToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        localStorage.removeItem("expert_access_token");
+        localStorage.removeItem("expert_user");
+        localStorage.removeItem("expert_profile");
+        setAccessToken(null);
+        setUser(null);
+        setProfile(null);
+        return;
+      }
+
+      const data = await response.json();
+      if (data.success && data.data) {
+        setUser(data.data.user);
+        setProfile(data.data.profile);
+        setAccessToken(storedToken);
+      }
+    } catch {
+      console.warn("Impossible de rafraîchir la session");
+    }
   };
 
   return (
