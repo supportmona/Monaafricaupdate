@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router";
 import { motion } from "motion/react";
 import {
   Upload,
@@ -8,14 +7,16 @@ import {
   Trash2,
   Search,
   Filter,
-  ArrowLeft,
   File,
   Image,
   FileVideo,
 } from "lucide-react";
-import { projectId, publicAnonKey } from "/utils/supabase/info";
+import { projectId } from "/utils/supabase/info";
+import { useExpertAuth } from "@/app/contexts/ExpertAuthContext";
+import ExpertLayout from "@/app/components/ExpertLayout";
 
 export default function ExpertDocumentsPage() {
+  const { accessToken } = useExpertAuth();
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -23,25 +24,27 @@ export default function ExpertDocumentsPage() {
   const [filterType, setFilterType] = useState("all");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ✅ Token correct
+  const getToken = () => accessToken || localStorage.getItem("expert_access_token");
+
   useEffect(() => {
     loadDocuments();
-  }, []);
+  }, [accessToken]);
 
   const loadDocuments = async () => {
-    try {
-      const token = localStorage.getItem("mona_expert_token");
-      if (!token) return;
+    const token = getToken();
+    if (!token) { setLoading(false); return; }
 
+    try {
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-6378cc81/expert/documents/list`,
         {
           headers: {
-            Authorization: `Bearer ${publicAnonKey}`,
-            "X-Expert-Token": token,
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
         }
       );
-
       if (response.ok) {
         const data = await response.json();
         setDocuments(data.data || []);
@@ -57,10 +60,11 @@ export default function ExpertDocumentsPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    const token = getToken();
+    if (!token) return;
+
     try {
       setUploading(true);
-      const token = localStorage.getItem("mona_expert_token");
-
       const formData = new FormData();
       formData.append("file", file);
       formData.append("documentType", "general");
@@ -70,10 +74,7 @@ export default function ExpertDocumentsPage() {
         `https://${projectId}.supabase.co/functions/v1/make-server-6378cc81/expert/documents/upload`,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${publicAnonKey}`,
-            "X-Expert-Token": token!,
-          },
+          headers: { Authorization: `Bearer ${token}` },
           body: formData,
         }
       );
@@ -81,7 +82,6 @@ export default function ExpertDocumentsPage() {
       if (response.ok) {
         const data = await response.json();
         setDocuments([data.data, ...documents]);
-        alert("Document uploadé avec succès");
       } else {
         const error = await response.json();
         alert(error.error || "Erreur lors de l'upload");
@@ -91,26 +91,19 @@ export default function ExpertDocumentsPage() {
       alert("Une erreur est survenue");
     } finally {
       setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
   const handleDownload = async (documentId: string) => {
-    try {
-      const token = localStorage.getItem("mona_expert_token");
+    const token = getToken();
+    if (!token) return;
 
+    try {
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-6378cc81/expert/documents/${documentId}/download`,
-        {
-          headers: {
-            Authorization: `Bearer ${publicAnonKey}`,
-            "X-Expert-Token": token!,
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       if (response.ok) {
         const data = await response.json();
         window.open(data.data.url, "_blank");
@@ -119,49 +112,37 @@ export default function ExpertDocumentsPage() {
       }
     } catch (error) {
       console.error("Erreur download:", error);
-      alert("Une erreur est survenue");
     }
   };
 
   const handleDelete = async (documentId: string) => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer ce document ?")) {
-      return;
-    }
+    if (!confirm("Êtes-vous sûr de vouloir supprimer ce document ?")) return;
+
+    const token = getToken();
+    if (!token) return;
 
     try {
-      const token = localStorage.getItem("mona_expert_token");
-
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-6378cc81/expert/documents/${documentId}`,
         {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${publicAnonKey}`,
-            "X-Expert-Token": token!,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
-
       if (response.ok) {
         setDocuments(documents.filter((d) => d.id !== documentId));
-        alert("Document supprimé");
       } else {
         alert("Erreur lors de la suppression");
       }
     } catch (error) {
       console.error("Erreur suppression:", error);
-      alert("Une erreur est survenue");
     }
   };
 
   const getFileIcon = (fileType: string) => {
-    if (fileType.startsWith("image/")) {
-      return <Image className="w-6 h-6" />;
-    } else if (fileType.startsWith("video/")) {
-      return <FileVideo className="w-6 h-6" />;
-    } else {
-      return <File className="w-6 h-6" />;
-    }
+    if (fileType?.startsWith("image/")) return <Image className="w-6 h-6" />;
+    if (fileType?.startsWith("video/")) return <FileVideo className="w-6 h-6" />;
+    return <File className="w-6 h-6" />;
   };
 
   const formatFileSize = (bytes: number) => {
@@ -171,90 +152,71 @@ export default function ExpertDocumentsPage() {
   };
 
   const filteredDocuments = documents.filter((doc) => {
-    const matchesSearch = doc.fileName
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesFilter =
-      filterType === "all" || doc.documentType === filterType;
+    const matchesSearch = doc.fileName?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = filterType === "all" || doc.documentType === filterType;
     return matchesSearch && matchesFilter;
   });
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F5F1ED] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#A68B6F] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-[#1A1A1A]/60">Chargement...</p>
+      <ExpertLayout title="Mes documents">
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-[#A68B6F] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-[#1A1A1A]/60">Chargement...</p>
+          </div>
         </div>
-      </div>
+      </ExpertLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F1ED]">
-      {/* Header */}
-      <header className="bg-white border-b border-[#D4C5B9]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link
-                to="/expert/dashboard"
-                className="p-2 hover:bg-[#F5F1ED] rounded-full transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5 text-[#1A1A1A]/60" />
-              </Link>
-              <div>
-                <h1 className="text-2xl font-serif text-[#1A1A1A]">
-                  Mes documents
-                </h1>
-                <p className="text-sm text-[#1A1A1A]/60 mt-1">
-                  {documents.length} document{documents.length > 1 ? "s" : ""}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                onChange={handleFileUpload}
-                disabled={uploading}
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="flex items-center gap-2 bg-[#1A1A1A] text-white px-4 py-2 rounded-full hover:bg-[#2A2A2A] transition-colors disabled:opacity-50"
-              >
-                <Upload className="w-4 h-4" />
-                {uploading ? "Upload..." : "Uploader"}
-              </button>
-            </div>
+    <ExpertLayout title="Mes documents">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        {/* Titre + upload */}
+        <div className="flex items-center justify-between mb-6">
+          <p className="text-sm text-[#1A1A1A]/60">
+            {documents.length} document{documents.length > 1 ? "s" : ""}
+          </p>
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={handleFileUpload}
+              disabled={uploading}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="flex items-center gap-2 bg-[#1A1A1A] text-white px-5 py-2.5 rounded-full hover:bg-[#2A2A2A] transition-colors disabled:opacity-50"
+            >
+              <Upload className="w-4 h-4" />
+              {uploading ? "Upload..." : "Uploader"}
+            </button>
           </div>
         </div>
-      </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Filters */}
+        {/* Filtres */}
         <div className="bg-white rounded-2xl p-6 border border-[#D4C5B9] mb-6">
           <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1A1A1A]/40" />
-                <input
-                  type="text"
-                  placeholder="Rechercher un document..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-[#D4C5B9] rounded-full focus:outline-none focus:ring-2 focus:ring-[#A68B6F] focus:border-transparent"
-                />
-              </div>
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1A1A1A]/40" />
+              <input
+                type="text"
+                placeholder="Rechercher un document..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-[#D4C5B9] rounded-full focus:outline-none focus:ring-2 focus:ring-[#A68B6F]"
+              />
             </div>
             <div className="flex items-center gap-2">
               <Filter className="w-5 h-5 text-[#1A1A1A]/60" />
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="px-4 py-3 border border-[#D4C5B9] rounded-full focus:outline-none focus:ring-2 focus:ring-[#A68B6F] focus:border-transparent"
+                className="px-4 py-3 border border-[#D4C5B9] rounded-full focus:outline-none focus:ring-2 focus:ring-[#A68B6F]"
               >
                 <option value="all">Tous les types</option>
                 <option value="general">Général</option>
@@ -266,13 +228,11 @@ export default function ExpertDocumentsPage() {
           </div>
         </div>
 
-        {/* Documents Grid */}
+        {/* Liste documents */}
         {filteredDocuments.length === 0 ? (
           <div className="bg-white rounded-2xl p-12 border border-[#D4C5B9] text-center">
             <FileText className="w-16 h-16 text-[#1A1A1A]/20 mx-auto mb-4" />
-            <h3 className="text-lg font-serif text-[#1A1A1A] mb-2">
-              Aucun document
-            </h3>
+            <h3 className="text-lg font-serif text-[#1A1A1A] mb-2">Aucun document</h3>
             <p className="text-sm text-[#1A1A1A]/60 mb-6">
               {searchQuery
                 ? "Aucun document ne correspond à votre recherche"
@@ -320,29 +280,22 @@ export default function ExpertDocumentsPage() {
                   </div>
                 </div>
 
-                <h3 className="font-medium text-[#1A1A1A] mb-2 truncate">
-                  {doc.fileName}
-                </h3>
+                <h3 className="font-medium text-[#1A1A1A] mb-2 truncate">{doc.fileName}</h3>
 
                 <div className="space-y-1 text-sm text-[#1A1A1A]/60">
-                  <p>Type: {doc.documentType}</p>
-                  <p>Taille: {formatFileSize(doc.fileSize)}</p>
-                  <p>
-                    Uploadé le:{" "}
-                    {new Date(doc.uploadedAt).toLocaleDateString("fr-FR")}
-                  </p>
+                  <p>Type : {doc.documentType}</p>
+                  <p>Taille : {formatFileSize(doc.fileSize)}</p>
+                  <p>Uploadé le : {new Date(doc.uploadedAt).toLocaleDateString("fr-FR")}</p>
                 </div>
 
                 {doc.notes && (
-                  <p className="mt-3 text-sm text-[#1A1A1A]/80 line-clamp-2">
-                    {doc.notes}
-                  </p>
+                  <p className="mt-3 text-sm text-[#1A1A1A]/80 line-clamp-2">{doc.notes}</p>
                 )}
               </motion.div>
             ))}
           </div>
         )}
       </div>
-    </div>
+    </ExpertLayout>
   );
 }
