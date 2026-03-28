@@ -6,8 +6,9 @@ import {
 } from "lucide-react";
 import { useMemberAuth } from "@/app/contexts/MemberAuthContext";
 import MemberHeader from "@/app/components/MemberHeader";
+import { projectId } from "/utils/supabase/info";
 
-const API_BASE = "https://nvjcbmzhkfdhxlmqurjn.supabase.co/functions/v1/make-server-6378cc81";
+const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-6378cc81`;
 
 // Expert démo — plus tard ce sera une liste dynamique
 const DEMO_EXPERT = {
