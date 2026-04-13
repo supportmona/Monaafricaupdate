@@ -208,7 +208,7 @@ serve(async (req) => {
     // Cherche dans experts_applications OU experts selon votre schéma
     const { data: expert, error: fetchErr } = await supabase
       .from('experts')
-      .select('id, full_name, email, specialty, profession, status, generated_email')
+      .select('id, name, email, specialty, status')
       .eq('id', expert_id)
       .single()
 
@@ -216,9 +216,7 @@ serve(async (req) => {
       return respond({ error: 'Expert introuvable', detail: fetchErr?.message }, 404)
     }
 
-    const expertName = expert.full_name
-      || `${expert.first_name ?? ''} ${expert.last_name ?? ''}`.trim()
-      || 'Expert'
+   const expertName = expert.name || 'Expert'
 
     // ── APPROBATION ───────────────────────────────────────────────────────────
     if (action === 'approve') {
