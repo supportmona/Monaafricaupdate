@@ -208,7 +208,7 @@ serve(async (req) => {
     // Cherche dans experts_applications OU experts selon votre schéma
     const { data: expert, error: fetchErr } = await supabase
       .from('experts')
-      .select('id, first_name, last_name, full_name, email, specialty, profession, status, generated_email')
+      .select('id, full_name, email, specialty, profession, status, generated_email')
       .eq('id', expert_id)
       .single()
 
