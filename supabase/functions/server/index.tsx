@@ -406,9 +406,10 @@ app.post("/make-server-6378cc81/expert/application", async (c) => {
     const applicationId = `app_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const application = { id: applicationId, firstName, lastName, email, phone, city, profession, experience, diplomas, specialties, languages, availability, linkedin, motivation, licenseNumber, files, status: status || "pending", submittedAt: submittedAt || new Date().toISOString() };
     await kv.set(`application:${applicationId}`, application);
-    const pendingApplications = await kv.get("applications:pending") || [];
-    pendingApplications.push(applicationId);
-    await kv.set("applications:pending", pendingApplications);
+    const raw = await kv.get("applications:pending");
+const pendingApplications: string[] = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : [];
+pendingApplications.push(applicationId);
+await kv.set("applications:pending", pendingApplications);
     return c.json({ success: true, message: "Candidature enregistrée avec succès", data: { applicationId } });
   } catch (error) {
     return c.json({ error: `Erreur serveur lors de l'enregistrement: ${error.message}` }, 500);
