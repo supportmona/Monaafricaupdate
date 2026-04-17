@@ -543,6 +543,10 @@ app.put("/make-server-6378cc81/expert/application/:id", async (c) => {
 } else if (body.status === "rejected") {
   await sendRejectionEmail(updatedApp.email, updatedApp.firstName, updatedApp.lastName);
 }
+    return c.json({ success: true, data: updatedApp });
+  } catch (error) {
+    return c.json({ error: `Erreur serveur: ${error.message}` }, 500);
+  }
 });
 
 // ==================== MESSAGERIE INTERNE ROUTES ====================
