@@ -178,93 +178,90 @@ export async function signupExpert(
  */
 export async function loginExpert(email: string, password: string) {
   try {
-    // Nettoyer les espaces invisibles
     const cleanEmail = email.trim();
     const cleanPassword = password.trim();
     
     console.log(`🔐 Tentative de connexion expert pour: ${cleanEmail}`);
-    console.log(`📧 Email reçu (longueur: ${cleanEmail.length}):`, JSON.stringify(cleanEmail));
-    console.log(`🔑 Mot de passe reçu (longueur: ${cleanPassword.length}):`, JSON.stringify(cleanPassword));
-    
-    // COMPTES DE TEST POUR DÉVELOPPEMENT
-    const TEST_EXPERT_ACCOUNTS = [
-      {
+
+    // Compte démo hardcodé
+    if (cleanEmail === "demo.expert@monafrica.net" && cleanPassword === "Expert2025!") {
+      const demoProfile = {
+        id: "expert-demo-001",
         email: "demo.expert@monafrica.net",
-        password: "Expert2025!",
-        user: {
-          id: "expert-demo-001",
-          email: "demo.expert@monafrica.net",
-          role: "authenticated",
-          aud: "authenticated",
-          user_metadata: {
-            role: "expert",
-            firstName: "Dr. Sarah",
-            lastName: "Koné",
-            specialty: "Psychiatre",
-            licenseNumber: "PSY-2024-001",
-            phone: "+225 07 00 00 00"
-          }
-        },
-        profile: {
-          id: "expert-demo-001",
-          email: "demo.expert@monafrica.net",
-          firstName: "Dr. Sarah",
-          lastName: "Koné",
-          specialty: "Psychiatre",
-          licenseNumber: "PSY-2024-001",
-          phone: "+225 07 00 00 00",
-          status: "active",
-          totalConsultations: 150,
-          rating: 4.9,
-          languages: ["Français", "Anglais"],
-          createdAt: new Date("2024-01-01").toISOString()
-        }
-      }
-    ];
-
-    // Vérifier les comptes de test d'abord
-    const testAccount = TEST_EXPERT_ACCOUNTS.find(
-      acc => acc.email === cleanEmail && acc.password === cleanPassword
-    );
-
-    if (testAccount) {
-      console.log("✅ Connexion réussie avec compte de test:", cleanEmail);
-      
-      // Stocker le profil dans KV pour cohérence
-      await kv.set(`expert:${testAccount.user.id}`, testAccount.profile);
-      
+        firstName: "Dr. Sarah",
+        lastName: "Koné",
+        specialty: "Psychiatre",
+        licenseNumber: "PSY-2024-001",
+        phone: "+225 07 00 00 00",
+        status: "active",
+        totalConsultations: 150,
+        rating: 4.9,
+        languages: ["Français", "Anglais"],
+        createdAt: new Date("2024-01-01").toISOString()
+      };
+      await kv.set(`expert:${demoProfile.id}`, demoProfile);
       return {
         data: {
-          user: testAccount.user,
-          session: {
-            access_token: `test_token_${testAccount.user.id}_${Date.now()}`,
-            refresh_token: `test_refresh_${testAccount.user.id}`,
-            expires_in: 3600,
-            token_type: "bearer"
-          },
-          profile: testAccount.profile
+          user: { id: "expert-demo-001", email: cleanEmail, role: "authenticated", aud: "authenticated", user_metadata: { role: "expert", ...demoProfile } },
+          session: { access_token: `test_token_expert-demo-001_${Date.now()}`, refresh_token: `test_refresh_expert-demo-001`, expires_in: 3600, token_type: "bearer" },
+          profile: demoProfile
         },
         error: null
       };
     }
 
-    // Si pas de compte de test, retourner une erreur claire avec les emails disponibles
-    console.error("❌ Email ou mot de passe incorrect");
-    console.log("📋 Comptes de test disponibles:");
-    TEST_EXPERT_ACCOUNTS.forEach(acc => {
-      console.log(`   - ${acc.email} / ${acc.password}`);
+    // Authentification Supabase Auth pour les vrais experts
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: cleanEmail,
+      password: cleanPassword,
     });
+
+    if (authError || !authData.user) {
+      console.error("❌ Échec auth:", authError?.message);
+      return { error: "Email ou mot de passe incorrect", data: null };
+    }
+
+    // Récupérer ou construire le profil
+    let profile = await kv.get(`expert:${authData.user.id}`);
     
-    return { 
-      error: "Email ou mot de passe incorrect", 
-      data: null 
-    };
-  } catch (error) {
-    console.error("❌ Exception lors de la connexion expert:", error);
+    if (!profile) {
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+      const { data: expertRow } = await supabaseAdmin
+        .from("experts")
+        .select("*")
+        .eq("email", cleanEmail)
+        .maybeSingle();
+
+      profile = {
+        id: authData.user.id,
+        email: cleanEmail,
+        firstName: expertRow?.name?.split(" ")[0] ?? authData.user.user_metadata?.full_name?.split(" ")[0] ?? "",
+        lastName: expertRow?.name?.split(" ").slice(1).join(" ") ?? "",
+        specialty: expertRow?.specialty ?? "",
+        phone: expertRow?.phone ?? "",
+        status: "active",
+        rating: expertRow?.rating ?? 0,
+        totalConsultations: expertRow?.total_sessions ?? 0,
+        languages: expertRow?.languages ?? ["Français"],
+        createdAt: expertRow?.created_at ?? new Date().toISOString()
+      };
+      await kv.set(`expert:${authData.user.id}`, profile);
+    }
+
+    console.log("✅ Connexion réussie:", cleanEmail);
     return {
-      error: `Erreur serveur lors de la connexion: ${error.message}`,
-      data: null,
+      data: {
+        user: authData.user,
+        session: authData.session,
+        profile,
+      },
+      error: null
     };
+
+  } catch (error) {
+    console.error("❌ Exception loginExpert:", error);
+    return { error: `Erreur serveur: ${error.message}`, data: null };
   }
 }
 
