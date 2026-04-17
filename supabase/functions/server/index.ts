@@ -28,7 +28,7 @@ import paymentWave from "./payment_wave.tsx";
 import paymentOrange from "./payment_orange.tsx";
 import invoiceGenerator from "./invoice_generator.tsx";
 import calWebhook from "./cal_webhook.tsx";
-import bookingRoutes from "./booking_routes.tsx";
+// import bookingRoutes from "./booking_routes.tsx";
 import { Hono } from 'npm:hono';
 import { logger } from 'npm:hono/logger';
 import { cors } from 'npm:hono/cors';
@@ -1638,6 +1638,6 @@ app.route("/make-server-6378cc81/invoices", invoiceGenerator);
 app.route("/make-server-6378cc81/webhooks", calWebhook);
 
 // ✅ Routes de booking (disponibilités + réservations + Daily.co)
-app.route("/make-server-6378cc81/booking", bookingRoutes);
+// app.route("/make-server-6378cc81/booking", bookingRoutes);
 
 Deno.serve(app.fetch);
