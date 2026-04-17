@@ -1,5 +1,5 @@
 import * as kv from "./kv_store.tsx";
-import { sendApprovalEmail, sendRejectionEmail, createExpertAccount, ... } from "./emailService.tsx";
+import { sendApprovalEmail, sendRejectionEmail, createExpertAccount } from "./emailService.tsx";
 import { sendContactEmail, sendSupportEmail } from "./emailService.tsx";
 import { sendConsultationNotificationEmail, sendMessageNotificationEmail } from "./notificationEmailService.tsx";
 import * as expertAuth from "./expert_auth.tsx";
