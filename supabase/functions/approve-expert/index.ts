@@ -218,7 +218,41 @@ serve(async (req) => {
           : 'Expert approuvé — email non envoyé, identifiants disponibles ci-dessus',
       })
     }
+// ── DÉSACTIVER ────────────────────────────────────────────────────────────
+    if (action === 'disable') {
+      // Bannir le compte Auth (bloque la connexion)
+      if (app.authUserId) {
+        await supabase.auth.admin.updateUserById(app.authUserId, { ban_duration: '876600h' })
+      }
+      // Mettre à jour le statut dans le KV store
+      await supabase.from(KV_TABLE)
+        .update({ value: JSON.stringify({ ...app, status: 'disabled', disabledAt: new Date().toISOString() }) })
+        .eq('key', `application:${expert_id}`)
+      return respond({ success: true, expert_id, message: 'Expert désactivé' })
+    }
 
+    // ── SUPPRIMER ─────────────────────────────────────────────────────────────
+    if (action === 'delete') {
+      // Supprimer le compte Auth
+      if (app.authUserId) {
+        await supabase.auth.admin.deleteUser(app.authUserId)
+      }
+      // Supprimer de la table experts
+      if (app.generatedEmail) {
+        await supabase.from('experts').delete().eq('email', app.generatedEmail)
+      }
+      // Supprimer du KV store
+      await supabase.from(KV_TABLE).delete().eq('key', `application:${expert_id}`)
+      // Retirer des listes approved/pending
+      for (const listKey of ['applications:approved', 'applications:pending']) {
+        const { data: list } = await supabase.from(KV_TABLE).select('value').eq('key', listKey).maybeSingle()
+        if (list) {
+          const arr: string[] = typeof list.value === 'string' ? JSON.parse(list.value) : list.value
+          await supabase.from(KV_TABLE).update({ value: JSON.stringify(arr.filter((id: string) => id !== expert_id)) }).eq('key', listKey)
+        }
+      }
+      return respond({ success: true, expert_id, message: 'Expert supprimé' })
+    }
     // ── REJET ─────────────────────────────────────────────────────────────────
     if (action === 'reject') {
       await supabase
